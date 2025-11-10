@@ -61,5 +61,51 @@ services:
       timeout: 3s
       retries: 5
 
+  postgres-app:
+    image: ${POSTGRES_IMAGE:-postgres:16}
+    container_name: darevel_postgres_app
+    environment:
+      POSTGRES_DB: darevel
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_app_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_APP_PORT:-5433}:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: darevel_backend
+    environment:
+      PORT: 4000
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@postgres-app:5432/darevel
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/pilot180
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/pilot180/protocol/openid-connect/certs
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://localhost:3007
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - backend_uploads:/app/uploads
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    depends_on:
+      postgres-app:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    restart: unless-stopped
+    command: npm run dev
+
 volumes:
   postgres_data:
+  postgres_app_data:
+  backend_uploads:
