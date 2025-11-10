@@ -1,0 +1,37 @@
+{
+  "name": "darevel-suite",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@10.9.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "node scripts/start-dev.js",
+    "dev:apps": "turbo run dev --parallel",
+    "dev:docker": "docker compose up -d",
+    "build": "turbo run build",
+    "stop": "docker compose down",
+    "clean": "docker compose down -v",
+    "logs": "docker compose logs -f",
+    "logs:keycloak": "docker logs -f darevel_keycloak",
+    "logs:postgres": "docker logs -f darevel_postgres",
+    "logs:redis": "docker logs -f darevel_redis",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Darevel Suite - Monorepo for all Darevel applications",
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "@types/react": "^19.2.2",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.17",
+    "turbo": "^2.6.0",
+    "typescript": "^5.9.3"
+  }
+}

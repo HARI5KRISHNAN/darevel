@@ -1,0 +1,58 @@
+{
+  "folders": [
+    {
+      "name": "🏠 Root",
+      "path": "."
+    },
+    {
+      "name": "🔐 Auth",
+      "path": "apps/auth"
+    },
+    {
+      "name": "📁 Drive",
+      "path": "apps/drive"
+    },
+    {
+      "name": "🔔 Notify",
+      "path": "apps/notify"
+    },
+    {
+      "name": "🎯 Suite",
+      "path": "apps/suite"
+    },
+    {
+      "name": "📦 SDK",
+      "path": "packages/sdk"
+    },
+    {
+      "name": "🎨 UI",
+      "path": "packages/ui"
+    },
+    {
+      "name": "⚙️ Config",
+      "path": "packages/config"
+    }
+  ],
+  "settings": {
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    },
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/.next": true,
+      "**/.turbo": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "dbaeumer.vscode-eslint",
+      "esbenp.prettier-vscode",
+      "bradlc.vscode-tailwindcss",
+      "unifiedjs.vscode-mdx"
+    ]
+  }
+}
