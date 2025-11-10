@@ -33,13 +33,11 @@ export const authOptions: NextAuthOptions = {
         token.refreshToken = account.refresh_token;
         token.expiresAt = account.expires_at;
       }
-
       if (profile) {
         token.email = profile.email;
         token.name = profile.name;
         token.sub = profile.sub;
       }
-
       return token;
     },
     async session({ session, token }) {
