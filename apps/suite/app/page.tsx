@@ -2,7 +2,9 @@
 
 import { ArrowRight, Zap, TrendingUp, Camera, Sparkles, Palette, Printer, Building2 } from "lucide-react"
 import { motion } from "framer-motion"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 
 const SolutionsDropdown = ({ isOpen }: { isOpen: boolean }) => {
   const solutions = [
@@ -90,6 +92,15 @@ const SolutionsDropdown = ({ isOpen }: { isOpen: boolean }) => {
 
 export default function Home() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/dashboard")
+    }
+  }, [status, router])
 
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
@@ -154,7 +165,10 @@ export default function Home() {
               Contact
             </a>
           </div>
-          <button className="px-6 py-2 rounded-full border border-white/30 hover:border-purple-400 transition text-sm">
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="px-6 py-2 rounded-full border border-white/30 hover:border-purple-400 transition text-sm hover:bg-white/10 cursor-pointer"
+          >
             Launch App
           </button>
         </div>
