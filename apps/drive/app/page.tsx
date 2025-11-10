@@ -1,0 +1,128 @@
+"use client";
+
+import { useSession, signOut } from "next-auth/react";
+import { redirect } from "next/navigation";
+
+export default function DrivePage() {
+  const { data: session, status } = useSession();
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-lg text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    redirect("/api/auth/signin");
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-100 p-8">
+      <div className="max-w-6xl mx-auto">
+        <div className="bg-white rounded-lg shadow-xl p-8 mb-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-4xl font-bold text-orange-900">
+              Darevel Drive
+            </h1>
+            <button
+              onClick={() => signOut({ callbackUrl: "/api/auth/signin" })}
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-200"
+            >
+              Sign Out
+            </button>
+          </div>
+
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <p className="text-green-800 font-semibold">
+              ✓ Successfully authenticated with SSO!
+            </p>
+          </div>
+
+          {session?.user && (
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-3">
+                User Information
+              </h2>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <p className="text-gray-700">
+                  <span className="font-semibold">Name:</span>{" "}
+                  {session.user.name || "N/A"}
+                </p>
+                <p className="text-gray-700">
+                  <span className="font-semibold">Email:</span>{" "}
+                  {session.user.email || "N/A"}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg shadow-xl p-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Cloud File Storage
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Store, sync, and share your files securely in the cloud. Coming soon!
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+              <h3 className="font-semibold text-orange-900 mb-2">
+                📁 File Management
+              </h3>
+              <p className="text-sm text-gray-600">
+                Upload, organize, and manage your files
+              </p>
+            </div>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+              <h3 className="font-semibold text-orange-900 mb-2">
+                🔒 Secure Storage
+              </h3>
+              <p className="text-sm text-gray-600">
+                Enterprise-grade security for your data
+              </p>
+            </div>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+              <h3 className="font-semibold text-orange-900 mb-2">
+                🔗 Easy Sharing
+              </h3>
+              <p className="text-sm text-gray-600">
+                Share files with your team effortlessly
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              Other Darevel Apps
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { name: "Suite", port: 3000 },
+                { name: "Slides", port: 3001 },
+                { name: "Chat", port: 3002 },
+                { name: "Mail", port: 3003 },
+                { name: "Excel", port: 3004 },
+                { name: "Auth", port: 3005 },
+                { name: "Notify", port: 3007 },
+              ].map((app) => (
+                <a
+                  key={app.name}
+                  href={`http://localhost:${app.port}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg p-4 text-center transition duration-200"
+                >
+                  <div className="font-semibold text-indigo-900">{app.name}</div>
+                  <div className="text-sm text-indigo-600">:{app.port}</div>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
