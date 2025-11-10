@@ -205,6 +205,16 @@ export default function DashboardPage() {
               </div>
 
               <Button
+                onClick={() => window.location.href = "/dashboard/profile"}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <User className="h-4 w-4" />
+                <span className="hidden sm:inline">Profile</span>
+              </Button>
+
+              <Button
                 onClick={() => signOut({ callbackUrl: "/api/auth/signin" })}
                 variant="outline"
                 size="sm"
