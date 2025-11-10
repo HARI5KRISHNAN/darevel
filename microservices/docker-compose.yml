@@ -1,0 +1,147 @@
+version: '3.9'
+
+services:
+  # PostgreSQL for App Data
+  postgres-app:
+    image: postgres:16
+    container_name: darevel_postgres_app
+    environment:
+      POSTGRES_DB: darevel
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_app_data:/var/lib/postgresql/data
+    networks:
+      - darevel-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Keycloak (from root docker-compose)
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.0
+    container_name: darevel_keycloak
+    environment:
+      KC_DB: postgres
+      KC_DB_URL_HOST: postgres-keycloak
+      KC_DB_URL_PORT: 5432
+      KC_DB_URL_DATABASE: keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    command:
+      - start-dev
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres-keycloak
+    networks:
+      - darevel-network
+
+  postgres-keycloak:
+    image: postgres:16
+    container_name: darevel_postgres_keycloak
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+    volumes:
+      - postgres_keycloak_data:/var/lib/postgresql/data
+    networks:
+      - darevel-network
+
+  # Redis for caching and pub/sub
+  redis:
+    image: redis:7-alpine
+    container_name: darevel_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - darevel-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: darevel_api_gateway
+    environment:
+      SERVER_PORT: 8081
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/pilot180
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/pilot180/protocol/openid-connect/certs
+      USER_SERVICE_URL: http://user-service:8082
+      DRIVE_SERVICE_URL: http://drive-service:8083
+    ports:
+      - "8081:8081"
+    depends_on:
+      - keycloak
+      - user-service
+      - drive-service
+    networks:
+      - darevel-network
+
+  # User Service
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    container_name: darevel_user_service
+    environment:
+      SERVER_PORT: 8082
+      DB_HOST: postgres-app
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/pilot180
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/pilot180/protocol/openid-connect/certs
+    ports:
+      - "8082:8082"
+    depends_on:
+      - postgres-app
+      - keycloak
+    networks:
+      - darevel-network
+
+  # Drive Service
+  drive-service:
+    build:
+      context: .
+      dockerfile: drive-service/Dockerfile
+    container_name: darevel_drive_service
+    environment:
+      SERVER_PORT: 8083
+      DB_HOST: postgres-app
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/pilot180
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/pilot180/protocol/openid-connect/certs
+      UPLOAD_DIR: /app/uploads
+    ports:
+      - "8083:8083"
+    volumes:
+      - drive_uploads:/app/uploads
+    depends_on:
+      - postgres-app
+      - keycloak
+    networks:
+      - darevel-network
+
+volumes:
+  postgres_app_data:
+  postgres_keycloak_data:
+  drive_uploads:
+
+networks:
+  darevel-network:
+    driver: bridge
