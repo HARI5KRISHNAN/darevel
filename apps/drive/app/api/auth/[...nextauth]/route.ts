@@ -10,6 +10,17 @@ export const authOptions: NextAuthOptions = {
       issuer: process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/pilot180",
     }),
   ],
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token.drive`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false,
+      }
+    }
+  },
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
