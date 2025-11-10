@@ -12,12 +12,12 @@ export const authOptions: NextAuthOptions = {
   ],
   cookies: {
     sessionToken: {
-      name: `next-auth.session-token.slides`,
+      name: `next-auth.session-token`,
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: false,
+        secure: false, // true in production with HTTPS
       }
     }
   },
@@ -33,13 +33,11 @@ export const authOptions: NextAuthOptions = {
         token.refreshToken = account.refresh_token;
         token.expiresAt = account.expires_at;
       }
-
       if (profile) {
         token.email = profile.email;
         token.name = profile.name;
         token.sub = profile.sub;
       }
-
       return token;
     },
     async session({ session, token }) {
