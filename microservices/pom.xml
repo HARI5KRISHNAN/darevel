@@ -27,6 +27,8 @@
         <module>mail-service</module>
         <module>chat-service</module>
         <module>notify-service</module>
+        <module>excel-service</module>
+        <module>slides-service</module>
         <module>common</module>
     </modules>
 

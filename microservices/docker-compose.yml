@@ -81,12 +81,22 @@ services:
       KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/pilot180/protocol/openid-connect/certs
       USER_SERVICE_URL: http://user-service:8082
       DRIVE_SERVICE_URL: http://drive-service:8083
+      MAIL_SERVICE_URL: http://mail-service:8084
+      CHAT_SERVICE_URL: http://chat-service:8085
+      NOTIFY_SERVICE_URL: http://notify-service:8086
+      EXCEL_SERVICE_URL: http://excel-service:8087
+      SLIDES_SERVICE_URL: http://slides-service:8088
     ports:
       - "8081:8081"
     depends_on:
       - keycloak
       - user-service
       - drive-service
+      - mail-service
+      - chat-service
+      - notify-service
+      - excel-service
+      - slides-service
     networks:
       - darevel-network
 
@@ -131,6 +141,122 @@ services:
       - "8083:8083"
     volumes:
       - drive_uploads:/app/uploads
+    depends_on:
+      - postgres-app
+      - keycloak
+    networks:
+      - darevel-network
+
+  # Mail Service
+  mail-service:
+    build:
+      context: .
+      dockerfile: mail-service/Dockerfile
+    container_name: darevel_mail_service
+    environment:
+      SERVER_PORT: 8084
+      DB_HOST: postgres-app
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/pilot180
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/pilot180/protocol/openid-connect/certs
+    ports:
+      - "8084:8084"
+    depends_on:
+      - postgres-app
+      - keycloak
+    networks:
+      - darevel-network
+
+  # Chat Service
+  chat-service:
+    build:
+      context: .
+      dockerfile: chat-service/Dockerfile
+    container_name: darevel_chat_service
+    environment:
+      SERVER_PORT: 8085
+      DB_HOST: postgres-app
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/pilot180
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/pilot180/protocol/openid-connect/certs
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "8085:8085"
+    depends_on:
+      - postgres-app
+      - keycloak
+      - redis
+    networks:
+      - darevel-network
+
+  # Notify Service
+  notify-service:
+    build:
+      context: .
+      dockerfile: notify-service/Dockerfile
+    container_name: darevel_notify_service
+    environment:
+      SERVER_PORT: 8086
+      DB_HOST: postgres-app
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/pilot180
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/pilot180/protocol/openid-connect/certs
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "8086:8086"
+    depends_on:
+      - postgres-app
+      - keycloak
+      - redis
+    networks:
+      - darevel-network
+
+  # Excel Service
+  excel-service:
+    build:
+      context: .
+      dockerfile: excel-service/Dockerfile
+    container_name: darevel_excel_service
+    environment:
+      SERVER_PORT: 8087
+      DB_HOST: postgres-app
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/pilot180
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/pilot180/protocol/openid-connect/certs
+    ports:
+      - "8087:8087"
+    depends_on:
+      - postgres-app
+      - keycloak
+    networks:
+      - darevel-network
+
+  # Slides Service
+  slides-service:
+    build:
+      context: .
+      dockerfile: slides-service/Dockerfile
+    container_name: darevel_slides_service
+    environment:
+      SERVER_PORT: 8088
+      DB_HOST: postgres-app
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/pilot180
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/pilot180/protocol/openid-connect/certs
+    ports:
+      - "8088:8088"
     depends_on:
       - postgres-app
       - keycloak
