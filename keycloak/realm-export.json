@@ -125,7 +125,9 @@
       "rootUrl": "http://localhost:3001",
       "redirectUris": [
         "http://localhost:3001/*",
+        "http://localhost:3001/api/auth/callback/keycloak",
         "http://slides.darevel.local:3001/*",
+        "http://slides.darevel.local:3001/api/auth/callback/keycloak",
         "http://*.darevel.local:3001/*"
       ],
       "webOrigins": [
@@ -134,7 +136,10 @@
         "http://*.darevel.local:3001",
         "+"
       ],
-      "publicClient": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "darevel-slides-secret-2025",
+      "serviceAccountsEnabled": false,
       "protocol": "openid-connect",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
