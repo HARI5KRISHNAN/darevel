@@ -1,209 +1,320 @@
-# 📧 Pilot180 Email System
+# Darevel Mail Application
 
-A complete, self-hosted email system with web UI, built with React, Node.js, Postfix, Dovecot, and Keycloak authentication.
+AI-powered email management application with integrated Calendar and Meetings features.
 
-## ✨ Features
+## Features
 
-- 📨 Send and receive emails
-- 📥 Inbox and Sent folders
-- 🔐 Keycloak authentication (SSO ready)
-- 👥 Multi-user support
-- 🎨 Modern, responsive UI
-- 🐳 Fully containerized with Docker
-- 🚀 One-command startup
+### Mail Management
+- **Inbox**: View and manage received emails
+- **Sent**: Access sent emails
+- **Drafts**: Save and edit draft emails
+- **Starred**: Quick access to important emails
+- **Trash**: Manage deleted emails
+- **Search**: Full-text search across all emails
+- **Compose**: Create and send new emails with attachments
 
-## 🚀 Quick Start (Plug & Play)
+### Calendar
+- **Event Management**: Create, update, and delete calendar events
+- **Date Range View**: View events by date range
+- **Event Search**: Search through calendar events
+- **Recurring Events**: Support for recurring events using RRULE
+- **Reminders**: Set reminders for upcoming events
+- **Attendees**: Invite multiple attendees to events
 
-### Prerequisites
+### Meetings
+- **Meeting Scheduling**: Schedule meetings with agenda and attendees
+- **Video Conferencing**: Integration with meeting links (Zoom, Teams, Google Meet)
+- **Status Tracking**: Track meeting status (scheduled, in_progress, completed, cancelled)
+- **Meeting Notes**: Add notes and minutes during/after meetings
+- **Recurring Meetings**: Support for recurring meetings
+- **Attendee Management**: Manage attendee list with RSVP status
 
-- Docker Desktop (or Docker + Docker Compose)
-- Git
-- Node.js (for frontend development)
+## Technology Stack
 
-### One-Command Setup
+### Frontend
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Authentication**: NextAuth v5 with Keycloak
+- **Styling**: Tailwind CSS v4
+- **UI Components**: Radix UI
+- **Icons**: Lucide React
 
-```bash
-# Clone the repository
-git clone https://github.com/HARI5KRISHNAN/Email-Repo.git
-cd Email-Repo
+### Backend
+- **Framework**: Spring Boot 3
+- **Language**: Java 17+
+- **Database**: PostgreSQL
+- **Authentication**: OAuth2 Resource Server (Keycloak JWT)
+- **ORM**: Spring Data JPA with Hibernate
+- **API**: RESTful API with OpenAPI documentation
 
-# Make startup script executable
-chmod +x start.sh
+## Architecture
 
-# Start everything!
-./start.sh
+### SSO Integration
+- Single Sign-On powered by Keycloak
+- JWT-based authentication
+- Shared session across all Darevel apps
+- Automatic token refresh
+
+### API Structure
+```
+Backend Service (Port 8084)
+├── /api/mail/* - Email management endpoints
+├── /api/calendar/events/* - Calendar event endpoints
+└── /api/meetings/* - Meeting management endpoints
 ```
 
-That's it! The script will:
-- ✅ Build all Docker images
-- ✅ Start all services (Postgres, Keycloak, Postfix, Dovecot, Backend)
-- ✅ Run database migrations automatically
-- ✅ Configure Keycloak realm and users
-- ✅ Initialize mail system
-- ✅ Send test emails
+### Frontend Routes
+```
+├── / - Landing page
+├── /dashboard - Mail inbox and management
+├── /calendar - Calendar view and event management
+└── /meetings - Meeting scheduler and management
+```
 
-The entire setup takes about 2 minutes.
+## Setup Instructions
 
-### Start the Frontend
+### Prerequisites
+- Node.js 18+
+- Java 17+
+- PostgreSQL 14+
+- Keycloak 24+
+- Maven 3.8+
 
+### Environment Variables
+
+Create `.env.local` in the `apps/mail` directory:
+
+```env
+# Keycloak Configuration
+KEYCLOAK_CLIENT_ID=ai-email-assistant
+KEYCLOAK_CLIENT_SECRET=darevel-mail-secret-2025
+KEYCLOAK_ISSUER=http://localhost:8080/realms/pilot180
+
+# API Configuration
+NEXT_PUBLIC_API_URL=http://localhost:8084
+
+# NextAuth Configuration
+NEXTAUTH_URL=http://localhost:3004
+NEXTAUTH_SECRET=your-nextauth-secret-here
+
+# Node Environment
+NODE_ENV=development
+```
+
+### Backend Configuration
+
+The backend configuration is in `microservices/mail-service/src/main/resources/application.yml`:
+
+```yaml
+server:
+  port: 8084
+
+spring:
+  application:
+    name: mail-service
+  datasource:
+    url: jdbc:postgresql://localhost:5433/darevel
+    username: postgres
+    password: postgres
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/pilot180
+```
+
+### Running the Application
+
+#### Backend
 ```bash
-# Install dependencies and start
+cd microservices/mail-service
+mvn clean install
+mvn spring-boot:run
+```
+
+#### Frontend
+```bash
+cd apps/mail
 npm install
 npm run dev
 ```
 
-### Access the Application
+The application will be available at:
+- Frontend: http://localhost:3004
+- Backend API: http://localhost:8084
 
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| **Frontend** | http://localhost:5173 (or 3006, 3007) | See test users below |
-| Backend API | http://localhost:8081 | N/A |
-| Keycloak Admin | http://localhost:8080/admin | admin / admin |
-| MailHog | http://localhost:8025 | N/A |
+## API Documentation
 
-### 👤 Test Users
+### Mail Endpoints
 
-All test users have the password: `password`
-
-- **alice@pilot180.local** - Alice Smith
-- **bob@pilot180.local** - Bob Johnson
-- **charlie@pilot180.local** - Charlie Brown
-
-## 📁 Project Structure
-
+#### Get Inbox
 ```
-Email-Repo/
-├── backend/                 # Node.js backend (Express + IMAP/SMTP)
-│   ├── migrations/         # Database migrations (auto-run)
-│   ├── services/           # Email services (IMAP, SMTP, DB)
-│   ├── routes/             # API routes
-│   └── docker-entrypoint.sh # Auto-runs migrations on startup
-├── mailserver/             # Mail server configuration
-│   ├── config/
-│   │   ├── postfix/       # Postfix config
-│   │   └── dovecot/       # Dovecot config
-│   └── init-postfix.sh    # Postfix initialization
-├── keycloak/              # Keycloak realm configuration
-│   └── pilot180-realm.json # Pre-configured realm with users
-├── App.tsx                # Main React component
-├── docker-compose.yml     # All services defined here
-└── start.sh              # One-command startup script
+GET /api/mail/inbox?page=0&size=20
 ```
 
-## 🛠️ Useful Commands
+#### Get Sent Emails
+```
+GET /api/mail/sent?page=0&size=20
+```
 
-### View Logs
+#### Compose Email
+```
+POST /api/mail/compose
+Content-Type: application/json
+
+{
+  "toEmail": "recipient@example.com",
+  "subject": "Subject",
+  "body": "Email body",
+  "isDraft": false
+}
+```
+
+### Calendar Endpoints
+
+#### Get Events
+```
+GET /api/calendar/events?page=0&size=20
+```
+
+#### Create Event
+```
+POST /api/calendar/events
+Content-Type: application/json
+
+{
+  "title": "Team Meeting",
+  "description": "Weekly sync",
+  "startTime": "2025-11-15T10:00:00",
+  "endTime": "2025-11-15T11:00:00",
+  "location": "Conference Room A",
+  "attendees": ["user1@example.com", "user2@example.com"]
+}
+```
+
+### Meeting Endpoints
+
+#### Get Meetings
+```
+GET /api/meetings?page=0&size=20
+```
+
+#### Create Meeting
+```
+POST /api/meetings
+Content-Type: application/json
+
+{
+  "title": "Product Review",
+  "description": "Q4 Product Review",
+  "startTime": "2025-11-20T14:00:00",
+  "endTime": "2025-11-20T15:30:00",
+  "meetingLink": "https://zoom.us/j/123456789",
+  "attendees": [
+    {"email": "user1@example.com", "name": "User 1", "status": "pending"}
+  ]
+}
+```
+
+## Database Schema
+
+### Emails Table
+- id, user_id, from_email, to_email, subject, body
+- is_read, is_starred, is_draft, is_sent, is_deleted
+- folder, attachment_urls, reply_to_id
+- created_at, sent_at
+
+### Calendar Events Table
+- id, user_id, title, description, location
+- start_time, end_time, all_day
+- color, attendees, recurrence_rule
+- reminder_minutes, is_cancelled
+- created_at, updated_at
+
+### Meetings Table
+- id, organizer_id, organizer_email, organizer_name
+- title, description, start_time, end_time
+- location, meeting_link, attendees
+- agenda, notes, status
+- is_recurring, recurrence_rule, reminder_minutes
+- created_at, updated_at
+
+## Security
+
+### Authentication Flow
+1. User logs in through Keycloak
+2. Frontend receives JWT access token
+3. Frontend stores token in session
+4. All API requests include Bearer token
+5. Backend validates JWT against Keycloak
+
+### Authorization
+- All endpoints require authentication
+- Resource access restricted to token owner
+- Email/event/meeting ownership validated server-side
+
+## Development
+
+### Code Structure
+
+#### Backend
+```
+microservices/mail-service/
+├── src/main/java/com/darevel/mail/
+│   ├── controller/ - REST controllers
+│   ├── service/ - Business logic
+│   ├── entity/ - JPA entities
+│   ├── repository/ - Data access
+│   └── dto/ - Data transfer objects
+```
+
+#### Frontend
+```
+apps/mail/
+├── app/ - Next.js app router pages
+├── lib/ - Utilities and API clients
+└── types/ - TypeScript type definitions
+```
+
+### Testing
 ```bash
-# All services
-docker-compose logs -f
+# Backend
+mvn test
 
-# Specific service
-docker logs -f pilot180-backend
-docker logs -f pilot180-postfix
+# Frontend
+npm test
 ```
 
-### Check Service Health
-```bash
-docker-compose ps
-```
+## Deployment
 
-### Restart Services
-```bash
-# Restart all
-docker-compose restart
+### Production Checklist
+- [ ] Update Keycloak issuer URL to production
+- [ ] Set secure NEXTAUTH_SECRET
+- [ ] Configure production database
+- [ ] Enable HTTPS
+- [ ] Set up email SMTP for actual sending
+- [ ] Configure CORS for production domains
+- [ ] Set up monitoring and logging
 
-# Restart specific service
-docker-compose restart backend
-```
+## Troubleshooting
 
-### Stop Everything
-```bash
-docker-compose down
+### Common Issues
 
-# Stop and remove volumes (fresh start)
-docker-compose down -v
-```
+#### Authentication fails
+- Verify Keycloak is running
+- Check client ID and secret
+- Ensure realm name is correct
 
-### Send Test Email
-```bash
-docker exec pilot180-postfix sendmail alice@pilot180.local <<EOF
-Subject: Test Email
-From: bob@pilot180.local
+#### API requests fail
+- Verify backend service is running on port 8084
+- Check CORS configuration
+- Ensure JWT token is valid
 
-This is a test email!
-EOF
-```
+#### Database connection fails
+- Verify PostgreSQL is running
+- Check database credentials
+- Ensure database exists
 
-## 🐛 Troubleshooting
+## License
 
-### Backend not starting?
-```bash
-docker logs pilot180-backend
-# Check if migrations ran successfully
-```
-
-### No emails appearing?
-```bash
-# Check Postfix logs
-docker logs pilot180-postfix | tail -50
-
-# Check Dovecot logs
-docker logs pilot180-dovecot | tail -50
-
-# Verify mailbox exists
-docker exec pilot180-dovecot ls -la /var/mail/vhosts/pilot180.local/bob/
-```
-
-### Can't login to frontend?
-```bash
-# Check Keycloak is running
-curl http://localhost:8080/health
-
-# Verify realm was imported
-docker logs pilot180-keycloak | grep "pilot180"
-```
-
-## 🏗️ Architecture
-
-```
-┌─────────────┐         ┌──────────────┐
-│   Browser   │────────▶│   Keycloak   │
-│  (React UI) │◀────────│ (Auth/Users) │
-└──────┬──────┘         └──────────────┘
-       │
-       │ REST API
-       ▼
-┌──────────────┐
-│   Backend    │
-│  (Node.js)   │
-└───┬──────┬───┘
-    │      │
-    │      └─────────┐
-    ▼                ▼
-┌─────────┐    ┌────────────┐
-│PostgreSQL│    │   Dovecot  │
-│  (DB)   │    │   (IMAP)   │
-└─────────┘    └─────┬──────┘
-                     │
-                     ▼
-               ┌────────────┐
-               │  Postfix   │
-               │  (SMTP)    │
-               └────────────┘
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test with `./start.sh`
-5. Submit a pull request
-
-## 📄 License
-
-MIT License
-
----
-
-**Need help?** Open an issue on GitHub!
+Copyright © 2025 Darevel. All rights reserved.
