@@ -110,8 +110,8 @@ async function main() {
     console.log("   Excel Service:   http://localhost:8087");
     console.log("   Slides Service:  http://localhost:8088");
     console.log("\n📍 Frontend Apps (Next.js):");
+    console.log("   Suite App:       http://localhost:3000");
     console.log("   Slides App:      http://localhost:3001");
-    console.log("   Suite App:       http://localhost:3002");
     console.log("   Auth App:        http://localhost:3005");
     console.log("   Drive App:       http://localhost:3006");
     console.log("   Notify App:      http://localhost:3007\n");
