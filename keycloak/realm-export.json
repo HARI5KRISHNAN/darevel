@@ -156,12 +156,15 @@
       "description": "Main suite dashboard",
       "rootUrl": "http://darevel.local",
       "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:3000/api/auth/callback/keycloak",
         "http://localhost:3002/*",
         "http://localhost:3002/api/auth/callback/keycloak",
         "http://darevel.local/*",
         "http://darevel.local/api/auth/callback/keycloak"
       ],
       "webOrigins": [
+        "http://localhost:3000",
         "http://localhost:3002",
         "http://darevel.local",
         "+"
@@ -174,7 +177,7 @@
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost:3002/*\nhttp://darevel.local/*"
+        "post.logout.redirect.uris": "http://localhost:3000/*\nhttp://localhost:3002/*\nhttp://darevel.local/*"
       }
     },
     {
