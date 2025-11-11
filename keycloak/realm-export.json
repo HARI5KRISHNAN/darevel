@@ -43,15 +43,15 @@
       "clientAuthenticatorType": "client-secret",
       "secret": "darevel-mail-secret-2025",
       "redirectUris": [
-        "http://localhost:3004/*",
-        "http://localhost:3004/callback",
-        "http://localhost:3004/api/auth/callback/keycloak",
+        "http://localhost:3003/*",
+        "http://localhost:3003/callback",
+        "http://localhost:3003/api/auth/callback/keycloak",
         "http://mail.darevel.local/*",
         "http://mail.darevel.local/callback",
         "http://mail.darevel.local/api/auth/callback/keycloak"
       ],
       "webOrigins": [
-        "http://localhost:3004",
+        "http://localhost:3003",
         "http://mail.darevel.local",
         "+"
       ],
@@ -66,7 +66,7 @@
       "frontchannelLogout": false,
       "protocol": "openid-connect",
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost:3004/*\nhttp://mail.darevel.local/*",
+        "post.logout.redirect.uris": "http://localhost:3003/*\nhttp://mail.darevel.local/*",
         "pkce.code.challenge.method": "S256"
       },
       "fullScopeAllowed": true
@@ -103,13 +103,13 @@
       "description": "AI spreadsheet application",
       "rootUrl": "http://excel.darevel.local",
       "redirectUris": [
-        "http://localhost:3001/*",
-        "http://localhost:3001/api/auth/callback/keycloak",
+        "http://localhost:3004/*",
+        "http://localhost:3004/api/auth/callback/keycloak",
         "http://excel.darevel.local/*",
         "http://excel.darevel.local/api/auth/callback/keycloak"
       ],
       "webOrigins": [
-        "http://localhost:3001",
+        "http://localhost:3004",
         "http://excel.darevel.local",
         "+"
       ],
@@ -120,7 +120,7 @@
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost:3001/*\nhttp://excel.darevel.local/*"
+        "post.logout.redirect.uris": "http://localhost:3004/*\nhttp://excel.darevel.local/*"
       }
     },
     {
