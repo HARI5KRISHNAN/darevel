@@ -1,8 +1,8 @@
-import { auth } from "./lib/auth";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export default auth((req) => {
-  const { pathname } = req.nextUrl;
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
 
   // Public routes that don't require authentication
   const publicRoutes = ['/signin', '/signup', '/error', '/api/auth'];
@@ -10,15 +10,22 @@ export default auth((req) => {
   // Check if the current route is public
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
 
-  if (!isPublicRoute && !req.auth) {
-    // Redirect to auth service for centralized login
-    const signInUrl = new URL('/api/auth/signin', process.env.NEXTAUTH_URL || 'http://darevel.local');
-    signInUrl.searchParams.set('callbackUrl', req.url);
+  if (isPublicRoute) {
+    return NextResponse.next();
+  }
+
+  // Get the shared SSO session cookie
+  const sessionToken = request.cookies.get('darevel-session');
+
+  // If no session token, redirect to auth service for centralized login
+  if (!sessionToken) {
+    const signInUrl = new URL('http://auth.darevel.local/api/auth/signin');
+    signInUrl.searchParams.set('callbackUrl', request.url);
     return NextResponse.redirect(signInUrl);
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: [
