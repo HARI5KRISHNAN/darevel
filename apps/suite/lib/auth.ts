@@ -11,12 +11,13 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
   ],
   cookies: {
     sessionToken: {
-      name: "next-auth.session-token.suite",
+      name: "darevel-session",
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
         secure: false,
+        domain: ".darevel.local", // Enable SSO across all subdomains
       },
     },
   },

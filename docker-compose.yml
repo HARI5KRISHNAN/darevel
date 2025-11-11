@@ -92,7 +92,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres-app:5432/darevel
       KEYCLOAK_ISSUER: http://keycloak:8080/realms/pilot180
       KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/pilot180/protocol/openid-connect/certs
-      CORS_ORIGINS: http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://localhost:3007,http://localhost:3008
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://localhost:3007,http://darevel.local,http://auth.darevel.local,http://chat.darevel.local,http://mail.darevel.local,http://drive.darevel.local,http://excel.darevel.local,http://slides.darevel.local,http://notify.darevel.local
     volumes:
       - ./backend:/app
       - /app/node_modules

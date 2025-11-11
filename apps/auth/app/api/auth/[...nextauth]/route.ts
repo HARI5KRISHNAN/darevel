@@ -12,12 +12,13 @@ export const authOptions: NextAuthOptions = {
   ],
   cookies: {
     sessionToken: {
-      name: `next-auth.session-token.auth`,
+      name: "darevel-session",
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
         secure: false,
+        domain: ".darevel.local", // Enable SSO across all subdomains
       }
     }
   },
@@ -58,6 +59,8 @@ export const authOptions: NextAuthOptions = {
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       // Allows callback URLs on the same origin
       else if (new URL(url).origin === baseUrl) return url;
+      // Allow redirects to any *.darevel.local subdomain for SSO
+      else if (url.includes('.darevel.local')) return url;
       return baseUrl;
     },
   },

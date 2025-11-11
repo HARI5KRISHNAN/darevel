@@ -73,14 +73,22 @@ spring:
         corsConfigurations:
           '[/**]':
             allowedOrigins:
-              - "http://localhost:3001"  # slides
-              - "http://localhost:3002"  # suite
-              - "http://localhost:3003"  # chat (future)
-              - "http://localhost:3004"  # excel (future)
-              - "http://localhost:3005"  # auth
-              - "http://localhost:3006"  # drive
-              - "http://localhost:3007"  # notify
-              - "http://localhost:3008"  # mail (future)
+              - "http://localhost:3000"   # slides (dev)
+              - "http://localhost:3001"   # excel (dev)
+              - "http://localhost:3002"   # suite (dev)
+              - "http://localhost:3003"   # chat (dev)
+              - "http://localhost:3004"   # mail (dev)
+              - "http://localhost:3005"   # auth (dev)
+              - "http://localhost:3006"   # drive (dev)
+              - "http://localhost:3007"   # notify (dev)
+              - "http://darevel.local"    # suite (domain)
+              - "http://auth.darevel.local"     # auth (domain)
+              - "http://chat.darevel.local"     # chat (domain)
+              - "http://mail.darevel.local"     # mail (domain)
+              - "http://drive.darevel.local"    # drive (domain)
+              - "http://excel.darevel.local"    # excel (domain)
+              - "http://slides.darevel.local"   # slides (domain)
+              - "http://notify.darevel.local"   # notify (domain)
             allowedMethods:
               - GET
               - POST
