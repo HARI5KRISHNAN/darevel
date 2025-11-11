@@ -5,7 +5,8 @@
 
 set -e
 
-DAREVEL_DIR="/home/user/darevel"
+# Detect the directory where this script is located
+DAREVEL_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOG_DIR="$DAREVEL_DIR/logs"
 
 echo "🚀 Starting Darevel Suite..."

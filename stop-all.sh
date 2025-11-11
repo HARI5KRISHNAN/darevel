@@ -3,7 +3,8 @@
 # Darevel Suite - Stop Script
 # This script stops all running services
 
-DAREVEL_DIR="/home/user/darevel"
+# Detect the directory where this script is located
+DAREVEL_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "🛑 Stopping Darevel Suite..."
 echo ""
