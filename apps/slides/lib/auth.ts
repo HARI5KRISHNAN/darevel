@@ -99,9 +99,18 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
       };
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url;
+      // Allow redirects to any *.darevel.local subdomain for SSO
+      else if (url.includes('.darevel.local')) return url;
+      return baseUrl;
+    },
   },
   pages: {
-    signIn: '/login',
+    signIn: '/signin',
   },
   debug: process.env.NODE_ENV === "development",
 });
