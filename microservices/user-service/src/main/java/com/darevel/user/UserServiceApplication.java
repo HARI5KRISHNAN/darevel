@@ -8,6 +8,6 @@ import org.springframework.context.annotation.ComponentScan;
 @ComponentScan(basePackages = {"com.darevel.user", "com.darevel.common"})
 public class UserServiceApplication {
     public static void main(String[] args) {
-        SpringApplication.run(UserServiceApplication.java, args);
+        SpringApplication.run(UserServiceApplication.class, args);
     }
 }
