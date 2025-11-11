@@ -59,56 +59,56 @@ echo ""
 echo "Starting apps in background (logs in $LOG_DIR)..."
 
 # Suite
-echo "  • Suite (darevel.local:3002)..."
+echo "  • Suite (localhost:3002 -> darevel.local)..."
 cd "$DAREVEL_DIR/apps/suite"
 npm run dev > "$LOG_DIR/suite.log" 2>&1 &
 SUITE_PID=$!
 echo "    PID: $SUITE_PID"
 
 # Auth
-echo "  • Auth (auth.darevel.local:3005)..."
+echo "  • Auth (localhost:3005 -> auth.darevel.local)..."
 cd "$DAREVEL_DIR/apps/auth"
 npm run dev > "$LOG_DIR/auth.log" 2>&1 &
 AUTH_PID=$!
 echo "    PID: $AUTH_PID"
 
 # Chat
-echo "  • Chat (chat.darevel.local:3003)..."
+echo "  • Chat (localhost:3003 -> chat.darevel.local)..."
 cd "$DAREVEL_DIR/apps/chat"
 npm run dev > "$LOG_DIR/chat.log" 2>&1 &
 CHAT_PID=$!
 echo "    PID: $CHAT_PID"
 
 # Mail
-echo "  • Mail (mail.darevel.local:3004)..."
+echo "  • Mail (localhost:3004 -> mail.darevel.local)..."
 cd "$DAREVEL_DIR/apps/mail"
 npm run dev > "$LOG_DIR/mail.log" 2>&1 &
 MAIL_PID=$!
 echo "    PID: $MAIL_PID"
 
 # Drive
-echo "  • Drive (drive.darevel.local:3006)..."
+echo "  • Drive (localhost:3006 -> drive.darevel.local)..."
 cd "$DAREVEL_DIR/apps/drive"
 npm run dev > "$LOG_DIR/drive.log" 2>&1 &
 DRIVE_PID=$!
 echo "    PID: $DRIVE_PID"
 
 # Excel
-echo "  • Excel (excel.darevel.local:3001)..."
+echo "  • Excel (localhost:3001 -> excel.darevel.local)..."
 cd "$DAREVEL_DIR/apps/excel"
 npm run dev > "$LOG_DIR/excel.log" 2>&1 &
 EXCEL_PID=$!
 echo "    PID: $EXCEL_PID"
 
 # Slides
-echo "  • Slides (slides.darevel.local:3000)..."
+echo "  • Slides (localhost:3000 -> slides.darevel.local)..."
 cd "$DAREVEL_DIR/apps/slides"
 npm run dev > "$LOG_DIR/slides.log" 2>&1 &
 SLIDES_PID=$!
 echo "    PID: $SLIDES_PID"
 
 # Notify
-echo "  • Notify (notify.darevel.local:3007)..."
+echo "  • Notify (localhost:3007 -> notify.darevel.local)..."
 cd "$DAREVEL_DIR/apps/notify"
 npm run dev > "$LOG_DIR/notify.log" 2>&1 &
 NOTIFY_PID=$!
@@ -125,14 +125,14 @@ echo "✅ Darevel Suite is now running!"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "🌐 Applications:"
-echo "   • Suite:  http://darevel.local"
-echo "   • Auth:   http://auth.darevel.local"
-echo "   • Chat:   http://chat.darevel.local"
-echo "   • Mail:   http://mail.darevel.local"
-echo "   • Drive:  http://drive.darevel.local"
-echo "   • Excel:  http://excel.darevel.local"
-echo "   • Slides: http://slides.darevel.local"
-echo "   • Notify: http://notify.darevel.local"
+echo "   • Suite:  http://localhost:3002 (or http://darevel.local via nginx)"
+echo "   • Auth:   http://localhost:3005 (or http://auth.darevel.local via nginx)"
+echo "   • Chat:   http://localhost:3003 (or http://chat.darevel.local via nginx)"
+echo "   • Mail:   http://localhost:3004 (or http://mail.darevel.local via nginx)"
+echo "   • Drive:  http://localhost:3006 (or http://drive.darevel.local via nginx)"
+echo "   • Excel:  http://localhost:3001 (or http://excel.darevel.local via nginx)"
+echo "   • Slides: http://localhost:3000 (or http://slides.darevel.local via nginx)"
+echo "   • Notify: http://localhost:3007 (or http://notify.darevel.local via nginx)"
 echo ""
 echo "🔐 Test Credentials:"
 echo "   Email:    demo@darevel.com"
