@@ -34,9 +34,9 @@
       "clientId": "ai-email-assistant",
       "name": "Darevel Mail",
       "description": "AI-powered email assistant",
-      "rootUrl": "http://mail.darevel.local",
-      "adminUrl": "http://mail.darevel.local",
-      "baseUrl": "http://mail.darevel.local",
+      "rootUrl": "https://mail.darevel.local:3004",
+      "adminUrl": "https://mail.darevel.local:3004",
+      "baseUrl": "https://mail.darevel.local:3004",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
@@ -46,13 +46,20 @@
         "http://localhost:3003/*",
         "http://localhost:3003/callback",
         "http://localhost:3003/api/auth/callback/keycloak",
+        "http://localhost:3004/*",
+        "https://localhost:3004/*",
         "http://mail.darevel.local/*",
         "http://mail.darevel.local/callback",
-        "http://mail.darevel.local/api/auth/callback/keycloak"
+        "http://mail.darevel.local/api/auth/callback/keycloak",
+        "https://mail.darevel.local:3004/*",
+        "https://mail.darevel.local:3004/callback"
       ],
       "webOrigins": [
         "http://localhost:3003",
+        "http://localhost:3004",
+        "https://localhost:3004",
         "http://mail.darevel.local",
+        "https://mail.darevel.local:3004",
         "+"
       ],
       "notBefore": 0,
@@ -66,7 +73,7 @@
       "frontchannelLogout": false,
       "protocol": "openid-connect",
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost:3003/*\nhttp://mail.darevel.local/*",
+        "post.logout.redirect.uris": "http://localhost:3003/*\nhttp://localhost:3004/*\nhttps://localhost:3004/*\nhttp://mail.darevel.local/*\nhttps://mail.darevel.local:3004/*",
         "pkce.code.challenge.method": "S256"
       },
       "fullScopeAllowed": true
