@@ -95,10 +95,27 @@ async function main() {
     console.log("✅ All backend services are ready!\n");
 
     // 4️⃣ Show service URLs
-    console.log("📍 Backend Services:");
-    console.log("   PostgreSQL:  localhost:5432 (user: keycloak, pass: keycloak)");
-    console.log("   Keycloak:    http://localhost:8080 (admin/admin)");
-    console.log("   Redis:       localhost:6379\n");
+    console.log("📍 Infrastructure Services:");
+    console.log("   PostgreSQL (Keycloak):  localhost:5432 (user: keycloak, pass: keycloak)");
+    console.log("   PostgreSQL (App):       localhost:5433 (user: postgres, pass: postgres)");
+    console.log("   Keycloak:               http://localhost:8080 (admin/admin)");
+    console.log("   Redis:                  localhost:6379");
+    console.log("\n📍 Microservices (Spring Boot):");
+    console.log("   API Gateway:     http://localhost:8081");
+    console.log("   User Service:    http://localhost:8082");
+    console.log("   Drive Service:   http://localhost:8083");
+    console.log("   Mail Service:    http://localhost:8084");
+    console.log("   Chat Service:    http://localhost:8085");
+    console.log("   Notify Service:  http://localhost:8086");
+    console.log("   Excel Service:   http://localhost:8087");
+    console.log("   Slides Service:  http://localhost:8088");
+    console.log("\n📍 Frontend Apps:");
+    console.log("   Slides App:      http://localhost:3000 (Next.js)");
+    console.log("   Suite App:       http://localhost:3002 (Next.js)");
+    console.log("   Mail App:        http://localhost:3004 (Vite)");
+    console.log("   Auth App:        http://localhost:3005 (Next.js)");
+    console.log("   Drive App:       http://localhost:3006 (Next.js)");
+    console.log("   Notify App:      http://localhost:3007 (Next.js)\n");
 
     console.log("=".repeat(60));
     console.log("\n🚀 Starting all Darevel apps with Turborepo...\n");

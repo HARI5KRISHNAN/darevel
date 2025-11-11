@@ -1,0 +1,109 @@
+version: "3.9"
+
+# Development configuration - uses mvn spring-boot:run with hot reload
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  # User Service - Development Mode
+  user-service:
+    build:
+      context: ./microservices
+      dockerfile: user-service/Dockerfile.dev
+    container_name: darevel_user_service_dev
+    environment:
+      SERVER_PORT: 8082
+      DB_HOST: postgres-app
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: darevel
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/pilot180
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/pilot180/protocol/openid-connect/certs
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+      SPRING_DEVTOOLS_LIVERELOAD_ENABLED: "true"
+    volumes:
+      # Mount source code for hot reload
+      - ./microservices/user-service/src:/app/user-service/src
+      - ./microservices/common/src:/app/common/src
+      # Cache Maven dependencies
+      - maven_repo:/root/.m2
+    ports:
+      - "${USER_SERVICE_PORT:-8082}:8082"
+      - "5005:5005"  # Debug port
+    depends_on:
+      postgres-app:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Drive Service - Development Mode
+  drive-service:
+    build:
+      context: ./microservices
+      dockerfile: drive-service/Dockerfile.dev
+    container_name: darevel_drive_service_dev
+    environment:
+      SERVER_PORT: 8083
+      DB_HOST: postgres-app
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: darevel
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/pilot180
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/pilot180/protocol/openid-connect/certs
+      UPLOAD_DIR: /app/uploads
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+      SPRING_DEVTOOLS_LIVERELOAD_ENABLED: "true"
+    volumes:
+      - ./microservices/drive-service/src:/app/drive-service/src
+      - ./microservices/common/src:/app/common/src
+      - maven_repo:/root/.m2
+      - drive_uploads:/app/uploads
+    ports:
+      - "${DRIVE_SERVICE_PORT:-8083}:8083"
+      - "5006:5005"  # Debug port
+    depends_on:
+      postgres-app:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # API Gateway - Development Mode
+  api-gateway:
+    build:
+      context: ./microservices
+      dockerfile: api-gateway/Dockerfile.dev
+    container_name: darevel_api_gateway_dev
+    environment:
+      SERVER_PORT: 8081
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/pilot180
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/pilot180/protocol/openid-connect/certs
+      USER_SERVICE_URL: http://user-service:8082
+      DRIVE_SERVICE_URL: http://drive-service:8083
+      MAIL_SERVICE_URL: http://mail-service:8084
+      CHAT_SERVICE_URL: http://chat-service:8085
+      NOTIFY_SERVICE_URL: http://notify-service:8086
+      EXCEL_SERVICE_URL: http://excel-service:8087
+      SLIDES_SERVICE_URL: http://slides-service:8088
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+      SPRING_DEVTOOLS_LIVERELOAD_ENABLED: "true"
+    volumes:
+      - ./microservices/api-gateway/src:/app/api-gateway/src
+      - ./microservices/common/src:/app/common/src
+      - maven_repo:/root/.m2
+    ports:
+      - "${API_GATEWAY_PORT:-8081}:8081"
+      - "5007:5005"  # Debug port
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      drive-service:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  maven_repo:  # Shared Maven repository cache

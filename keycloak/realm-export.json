@@ -34,24 +34,25 @@
       "clientId": "ai-email-assistant",
       "name": "Darevel Mail",
       "description": "AI-powered email assistant",
-      "rootUrl": "http://localhost:3003",
-      "adminUrl": "http://localhost:3003",
-      "baseUrl": "http://localhost:3003",
+      "rootUrl": "http://mail.darevel.local",
+      "adminUrl": "http://mail.darevel.local",
+      "baseUrl": "http://mail.darevel.local",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
+      "secret": "darevel-mail-secret-2025",
       "redirectUris": [
         "http://localhost:3003/*",
         "http://localhost:3003/callback",
-        "http://mail.darevel.local:3003/*",
-        "http://mail.darevel.local:3003/callback",
-        "http://*.darevel.local:3003/*"
+        "http://localhost:3003/api/auth/callback/keycloak",
+        "http://mail.darevel.local/*",
+        "http://mail.darevel.local/callback",
+        "http://mail.darevel.local/api/auth/callback/keycloak"
       ],
       "webOrigins": [
         "http://localhost:3003",
-        "http://mail.darevel.local:3003",
-        "http://*.darevel.local:3003",
+        "http://mail.darevel.local",
         "+"
       ],
       "notBefore": 0,
@@ -61,11 +62,11 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": false,
-      "publicClient": true,
+      "publicClient": false,
       "frontchannelLogout": false,
       "protocol": "openid-connect",
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost:3003/*\nhttp://mail.darevel.local:3003/*",
+        "post.logout.redirect.uris": "http://localhost:3003/*\nhttp://mail.darevel.local/*",
         "pkce.code.challenge.method": "S256"
       },
       "fullScopeAllowed": true
@@ -74,66 +75,68 @@
       "clientId": "darevel-chat",
       "name": "Darevel Chat",
       "description": "AI chat application",
-      "rootUrl": "http://localhost:3002",
+      "rootUrl": "http://chat.darevel.local",
       "redirectUris": [
-        "http://localhost:3002/*",
-        "http://chat.darevel.local:3002/*",
-        "http://*.darevel.local:3002/*"
+        "http://localhost:3003/*",
+        "http://localhost:3003/api/auth/callback/keycloak",
+        "http://chat.darevel.local/*",
+        "http://chat.darevel.local/api/auth/callback/keycloak"
       ],
       "webOrigins": [
-        "http://localhost:3002",
-        "http://chat.darevel.local:3002",
-        "http://*.darevel.local:3002",
+        "http://localhost:3003",
+        "http://chat.darevel.local",
         "+"
       ],
-      "publicClient": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "darevel-chat-secret-2025",
       "protocol": "openid-connect",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost:3002/*\nhttp://chat.darevel.local:3002/*"
+        "post.logout.redirect.uris": "http://localhost:3003/*\nhttp://chat.darevel.local/*"
       }
     },
     {
       "clientId": "darevel-excel",
       "name": "Darevel Excel",
       "description": "AI spreadsheet application",
-      "rootUrl": "http://localhost:3004",
+      "rootUrl": "http://excel.darevel.local",
       "redirectUris": [
         "http://localhost:3004/*",
-        "http://excel.darevel.local:3004/*",
-        "http://*.darevel.local:3004/*"
+        "http://localhost:3004/api/auth/callback/keycloak",
+        "http://excel.darevel.local/*",
+        "http://excel.darevel.local/api/auth/callback/keycloak"
       ],
       "webOrigins": [
         "http://localhost:3004",
-        "http://excel.darevel.local:3004",
-        "http://*.darevel.local:3004",
+        "http://excel.darevel.local",
         "+"
       ],
-      "publicClient": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "darevel-excel-secret-2025",
       "protocol": "openid-connect",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost:3004/*\nhttp://excel.darevel.local:3004/*"
+        "post.logout.redirect.uris": "http://localhost:3004/*\nhttp://excel.darevel.local/*"
       }
     },
     {
       "clientId": "darevel-slides",
       "name": "Darevel Slides",
       "description": "AI presentation application",
-      "rootUrl": "http://localhost:3001",
+      "rootUrl": "http://slides.darevel.local",
       "redirectUris": [
-        "http://localhost:3001/*",
-        "http://localhost:3001/api/auth/callback/keycloak",
-        "http://slides.darevel.local:3001/*",
-        "http://slides.darevel.local:3001/api/auth/callback/keycloak",
-        "http://*.darevel.local:3001/*"
+        "http://localhost:3000/*",
+        "http://localhost:3000/api/auth/callback/keycloak",
+        "http://slides.darevel.local/*",
+        "http://slides.darevel.local/api/auth/callback/keycloak"
       ],
       "webOrigins": [
-        "http://localhost:3001",
-        "http://slides.darevel.local:3001",
-        "http://*.darevel.local:3001",
+        "http://localhost:3000",
+        "http://slides.darevel.local",
         "+"
       ],
       "publicClient": false,
@@ -144,25 +147,26 @@
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost:3001/*\nhttp://slides.darevel.local:3001/*"
+        "post.logout.redirect.uris": "http://localhost:3000/*\nhttp://slides.darevel.local/*"
       }
     },
     {
       "clientId": "darevel-suite",
       "name": "Darevel Suite",
       "description": "Main suite dashboard",
-      "rootUrl": "http://localhost:3000",
+      "rootUrl": "http://darevel.local",
       "redirectUris": [
         "http://localhost:3000/*",
-        "http://suite.darevel.local:3000/*",
         "http://localhost:3000/api/auth/callback/keycloak",
-        "http://suite.darevel.local:3000/api/auth/callback/keycloak",
-        "http://*.darevel.local:3000/*"
+        "http://localhost:3002/*",
+        "http://localhost:3002/api/auth/callback/keycloak",
+        "http://darevel.local/*",
+        "http://darevel.local/api/auth/callback/keycloak"
       ],
       "webOrigins": [
         "http://localhost:3000",
-        "http://suite.darevel.local:3000",
-        "http://*.darevel.local:3000",
+        "http://localhost:3002",
+        "http://darevel.local",
         "+"
       ],
       "publicClient": false,
@@ -173,25 +177,23 @@
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost:3000/*\nhttp://suite.darevel.local:3000/*"
+        "post.logout.redirect.uris": "http://localhost:3000/*\nhttp://localhost:3002/*\nhttp://darevel.local/*"
       }
     },
     {
       "clientId": "darevel-drive",
       "name": "Darevel Drive",
       "description": "Cloud storage application",
-      "rootUrl": "http://localhost:3006",
+      "rootUrl": "http://drive.darevel.local",
       "redirectUris": [
         "http://localhost:3006/*",
-        "http://drive.darevel.local:3006/*",
         "http://localhost:3006/api/auth/callback/keycloak",
-        "http://drive.darevel.local:3006/api/auth/callback/keycloak",
-        "http://*.darevel.local:3006/*"
+        "http://drive.darevel.local/*",
+        "http://drive.darevel.local/api/auth/callback/keycloak"
       ],
       "webOrigins": [
         "http://localhost:3006",
-        "http://drive.darevel.local:3006",
-        "http://*.darevel.local:3006",
+        "http://drive.darevel.local",
         "+"
       ],
       "publicClient": false,
@@ -202,25 +204,23 @@
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost:3006/*\nhttp://drive.darevel.local:3006/*"
+        "post.logout.redirect.uris": "http://localhost:3006/*\nhttp://drive.darevel.local/*"
       }
     },
     {
       "clientId": "darevel-auth",
       "name": "Darevel Auth",
       "description": "Authentication service",
-      "rootUrl": "http://localhost:3005",
+      "rootUrl": "http://auth.darevel.local",
       "redirectUris": [
         "http://localhost:3005/*",
-        "http://auth.darevel.local:3005/*",
         "http://localhost:3005/api/auth/callback/keycloak",
-        "http://auth.darevel.local:3005/api/auth/callback/keycloak",
-        "http://*.darevel.local:3005/*"
+        "http://auth.darevel.local/*",
+        "http://auth.darevel.local/api/auth/callback/keycloak"
       ],
       "webOrigins": [
         "http://localhost:3005",
-        "http://auth.darevel.local:3005",
-        "http://*.darevel.local:3005",
+        "http://auth.darevel.local",
         "+"
       ],
       "publicClient": false,
@@ -231,25 +231,23 @@
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost:3005/*\nhttp://auth.darevel.local:3005/*"
+        "post.logout.redirect.uris": "http://localhost:3005/*\nhttp://auth.darevel.local/*"
       }
     },
     {
       "clientId": "darevel-notify",
       "name": "Darevel Notify",
       "description": "Notification service",
-      "rootUrl": "http://localhost:3007",
+      "rootUrl": "http://notify.darevel.local",
       "redirectUris": [
         "http://localhost:3007/*",
-        "http://notify.darevel.local:3007/*",
         "http://localhost:3007/api/auth/callback/keycloak",
-        "http://notify.darevel.local:3007/api/auth/callback/keycloak",
-        "http://*.darevel.local:3007/*"
+        "http://notify.darevel.local/*",
+        "http://notify.darevel.local/api/auth/callback/keycloak"
       ],
       "webOrigins": [
         "http://localhost:3007",
-        "http://notify.darevel.local:3007",
-        "http://*.darevel.local:3007",
+        "http://notify.darevel.local",
         "+"
       ],
       "publicClient": false,
@@ -260,7 +258,7 @@
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost:3007/*\nhttp://notify.darevel.local:3007/*"
+        "post.logout.redirect.uris": "http://localhost:3007/*\nhttp://notify.darevel.local/*"
       }
     }
   ],

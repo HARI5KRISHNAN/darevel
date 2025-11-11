@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { SessionProvider } from './providers'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -37,15 +38,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans antialiased`}>
-        {children}
-        <Analytics />
-      
+        <SessionProvider>
+          {children}
+          <Analytics />
+
 
 {/* Auto-added Darevel footer */}
 <footer className="site-footer">
   <p>© 2025 <span style={{background: 'linear-gradient(90deg,#a855f7,#06b6d4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', fontWeight:700}}>Darevel</span>. Unified Workspace for the Future.</p>
 </footer>
 
+        </SessionProvider>
 </body>
     </html>
   )
