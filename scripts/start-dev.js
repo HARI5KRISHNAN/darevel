@@ -109,12 +109,13 @@ async function main() {
     console.log("   Notify Service:  http://localhost:8086");
     console.log("   Excel Service:   http://localhost:8087");
     console.log("   Slides Service:  http://localhost:8088");
-    console.log("\n📍 Frontend Apps (Next.js):");
-    console.log("   Suite App:       http://localhost:3000");
-    console.log("   Slides App:      http://localhost:3001");
-    console.log("   Auth App:        http://localhost:3005");
-    console.log("   Drive App:       http://localhost:3006");
-    console.log("   Notify App:      http://localhost:3007\n");
+    console.log("\n📍 Frontend Apps:");
+    console.log("   Slides App:      http://localhost:3000 (Next.js)");
+    console.log("   Suite App:       http://localhost:3002 (Next.js)");
+    console.log("   Mail App:        http://localhost:3004 (Vite)");
+    console.log("   Auth App:        http://localhost:3005 (Next.js)");
+    console.log("   Drive App:       http://localhost:3006 (Next.js)");
+    console.log("   Notify App:      http://localhost:3007 (Next.js)\n");
 
     console.log("=".repeat(60));
     console.log("\n🚀 Starting all Darevel apps with Turborepo...\n");
