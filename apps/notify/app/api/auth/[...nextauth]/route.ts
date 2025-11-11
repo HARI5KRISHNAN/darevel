@@ -18,6 +18,57 @@ export const authOptions: NextAuthOptions = {
         sameSite: 'lax',
         path: '/',
         secure: false,
+        domain: ".darevel.local",
+      }
+    },
+    callbackUrl: {
+      name: `next-auth.callback-url.notify`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false,
+        domain: ".darevel.local",
+      }
+    },
+    csrfToken: {
+      name: `next-auth.csrf-token.notify`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false,
+        domain: ".darevel.local",
+      }
+    },
+    pkceCodeVerifier: {
+      name: `next-auth.pkce.code_verifier.notify`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false,
+        domain: ".darevel.local",
+      }
+    },
+    state: {
+      name: `next-auth.state.notify`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false,
+        domain: ".darevel.local",
+      }
+    },
+    nonce: {
+      name: `next-auth.nonce.notify`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false,
+        domain: ".darevel.local",
       }
     }
   },

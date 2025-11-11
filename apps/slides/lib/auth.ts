@@ -20,6 +20,56 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         secure: false, // Set to true in production with HTTPS
       },
     },
+    callbackUrl: {
+      name: "next-auth.callback-url",
+      options: {
+        domain: ".darevel.local",
+        path: "/",
+        sameSite: "lax",
+        httpOnly: true,
+        secure: false,
+      },
+    },
+    csrfToken: {
+      name: "next-auth.csrf-token",
+      options: {
+        domain: ".darevel.local",
+        path: "/",
+        sameSite: "lax",
+        httpOnly: true,
+        secure: false,
+      },
+    },
+    pkceCodeVerifier: {
+      name: "next-auth.pkce.code_verifier",
+      options: {
+        domain: ".darevel.local",
+        path: "/",
+        sameSite: "lax",
+        httpOnly: true,
+        secure: false,
+      },
+    },
+    state: {
+      name: "next-auth.state",
+      options: {
+        domain: ".darevel.local",
+        path: "/",
+        sameSite: "lax",
+        httpOnly: true,
+        secure: false,
+      },
+    },
+    nonce: {
+      name: "next-auth.nonce",
+      options: {
+        domain: ".darevel.local",
+        path: "/",
+        sameSite: "lax",
+        httpOnly: true,
+        secure: false,
+      },
+    },
   },
   session: {
     strategy: "jwt",

@@ -20,6 +20,56 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         domain: ".darevel.local", // Enable SSO across all subdomains
       },
     },
+    callbackUrl: {
+      name: "darevel-callback-url",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: false,
+        domain: ".darevel.local",
+      },
+    },
+    csrfToken: {
+      name: "darevel-csrf-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: false,
+        domain: ".darevel.local",
+      },
+    },
+    pkceCodeVerifier: {
+      name: "darevel-pkce-code-verifier",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: false,
+        domain: ".darevel.local",
+      },
+    },
+    state: {
+      name: "darevel-state",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: false,
+        domain: ".darevel.local",
+      },
+    },
+    nonce: {
+      name: "darevel-nonce",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: false,
+        domain: ".darevel.local",
+      },
+    },
   },
   session: {
     strategy: "jwt",
