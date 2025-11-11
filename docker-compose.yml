@@ -324,6 +324,31 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: darevel_nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - keycloak
+    restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - darevel.local
+          - auth.darevel.local
+          - chat.darevel.local
+          - mail.darevel.local
+          - drive.darevel.local
+          - excel.darevel.local
+          - slides.darevel.local
+          - notify.darevel.local
+          - api.darevel.local
+          - keycloak.darevel.local
+
 volumes:
   postgres_data:
   postgres_app_data:
