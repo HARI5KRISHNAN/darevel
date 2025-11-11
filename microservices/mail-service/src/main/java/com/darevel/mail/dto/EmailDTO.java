@@ -26,6 +26,7 @@ public class EmailDTO {
     private Boolean isStarred;
     private Boolean isDraft;
     private Boolean isSent;
+    private Boolean isDeleted;
     private String folder;
     private List<String> attachmentUrls;
     private Long replyToId;
