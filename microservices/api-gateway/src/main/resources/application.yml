@@ -73,14 +73,14 @@ spring:
         corsConfigurations:
           '[/**]':
             allowedOrigins:
-              - "http://localhost:3000"
-              - "http://localhost:3001"
-              - "http://localhost:3002"
-              - "http://localhost:3003"
-              - "http://localhost:3004"
-              - "http://localhost:3005"
-              - "http://localhost:3006"
-              - "http://localhost:3007"
+              - "http://localhost:3001"  # slides
+              - "http://localhost:3002"  # suite
+              - "http://localhost:3003"  # chat (future)
+              - "http://localhost:3004"  # excel (future)
+              - "http://localhost:3005"  # auth
+              - "http://localhost:3006"  # drive
+              - "http://localhost:3007"  # notify
+              - "http://localhost:3008"  # mail (future)
             allowedMethods:
               - GET
               - POST
