@@ -107,7 +107,7 @@ export default function DashboardPage() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-        const response = await fetch(`http://localhost:${app.port}/api/auth/session`, {
+        const response = await fetch(`http://localhost:${app.port}/api/health`, {
           signal: controller.signal,
         });
 
