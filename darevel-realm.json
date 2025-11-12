@@ -1,0 +1,24 @@
+{
+  "realm": "darevel",
+  "enabled": true,
+  "users": [
+    {
+      "username": "demo@darevel.com",
+      "enabled": true,
+      "email": "demo@darevel.com",
+      "firstName": "Demo",
+      "lastName": "User",
+      "credentials": [{ "type": "password", "value": "demo123", "temporary": false }]
+    }
+  ],
+  "clients": [
+    { "clientId": "darevel-auth", "rootUrl": "http://auth.darevel.local", "redirectUris": ["*"], "publicClient": true, "protocol": "openid-connect" },
+    { "clientId": "darevel-suite", "rootUrl": "http://suite.darevel.local", "redirectUris": ["*"], "publicClient": true, "protocol": "openid-connect" },
+    { "clientId": "darevel-drive", "rootUrl": "http://drive.darevel.local", "redirectUris": ["*"], "publicClient": true, "protocol": "openid-connect" },
+    { "clientId": "darevel-chat", "rootUrl": "http://chat.darevel.local", "redirectUris": ["*"], "publicClient": true, "protocol": "openid-connect" },
+    { "clientId": "darevel-excel", "rootUrl": "http://excel.darevel.local", "redirectUris": ["*"], "publicClient": true, "protocol": "openid-connect" },
+    { "clientId": "darevel-mail", "rootUrl": "http://mail.darevel.local", "redirectUris": ["*"], "publicClient": true, "protocol": "openid-connect" },
+    { "clientId": "darevel-slides", "rootUrl": "http://slides.darevel.local", "redirectUris": ["*"], "publicClient": true, "protocol": "openid-connect" },
+    { "clientId": "darevel-notify", "rootUrl": "http://notify.darevel.local", "redirectUris": ["*"], "publicClient": true, "protocol": "openid-connect" }
+  ]
+}

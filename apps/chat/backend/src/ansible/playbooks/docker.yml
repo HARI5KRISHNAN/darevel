@@ -1,0 +1,140 @@
+---
+# Ansible Playbook: Docker Registry Permission Management
+# Manages user permissions in Docker Registry and Docker daemon
+
+- name: Manage Docker User Permissions
+  hosts: docker
+  become: yes
+  gather_facts: yes
+  vars:
+    user: "{{ user | default('') }}"
+    access: "{{ access | default('read') }}"
+    docker_group: "docker"
+
+  tasks:
+    - name: Validate required parameters
+      fail:
+        msg: "User parameter is required"
+      when: user == ''
+
+    - name: Display permission update details
+      debug:
+        msg: "Setting {{ access }} access for user {{ user }} on Docker"
+
+    - name: Ensure Docker group exists
+      group:
+        name: "{{ docker_group }}"
+        state: present
+
+    - name: Create system user if not exists
+      user:
+        name: "{{ user }}"
+        groups: "{{ docker_group if access != 'read' else '' }}"
+        append: yes
+        create_home: yes
+        shell: /bin/bash
+      register: user_result
+
+    - name: Grant read-only access (pull images)
+      block:
+        - name: Create Docker read-only user config
+          file:
+            path: "/home/{{ user }}/.docker"
+            state: directory
+            owner: "{{ user }}"
+            mode: '0755'
+
+        - name: Configure Docker CLI for read-only
+          copy:
+            dest: "/home/{{ user }}/.docker/config.json"
+            content: |
+              {
+                "auths": {},
+                "HttpHeaders": {
+                  "User-Agent": "Docker-Client/whooper-readonly"
+                }
+              }
+            owner: "{{ user }}"
+            mode: '0644'
+
+        - name: Create alias for read-only Docker commands
+          lineinfile:
+            path: "/home/{{ user }}/.bashrc"
+            line: "alias docker='docker pull'"
+            create: yes
+      when: access == 'read'
+
+    - name: Grant write access (push images, manage containers)
+      block:
+        - name: Add user to Docker group
+          user:
+            name: "{{ user }}"
+            groups: "{{ docker_group }}"
+            append: yes
+
+        - name: Grant permissions to Docker socket
+          file:
+            path: /var/run/docker.sock
+            mode: '0660'
+            group: "{{ docker_group }}"
+
+        - name: Configure Docker daemon for user
+          copy:
+            dest: "/etc/docker/daemon.json"
+            content: |
+              {
+                "userns-remap": "{{ user }}",
+                "log-driver": "json-file",
+                "log-opts": {
+                  "max-size": "10m",
+                  "max-file": "3"
+                }
+              }
+            backup: yes
+          notify: restart docker
+      when: access == 'write'
+
+    - name: Grant execute access (admin, manage daemon)
+      block:
+        - name: Add user to Docker and sudo groups
+          user:
+            name: "{{ user }}"
+            groups: "{{ docker_group }},sudo"
+            append: yes
+
+        - name: Grant passwordless sudo for Docker commands
+          lineinfile:
+            path: /etc/sudoers.d/docker-admin
+            line: "{{ user }} ALL=(ALL) NOPASSWD: /usr/bin/docker*"
+            create: yes
+            mode: '0440'
+            validate: 'visudo -cf %s'
+
+        - name: Grant full Docker daemon control
+          copy:
+            dest: "/etc/systemd/system/docker.service.d/override.conf"
+            content: |
+              [Service]
+              ExecStart=
+              ExecStart=/usr/bin/dockerd --group {{ docker_group }} -H fd:// -H tcp://0.0.0.0:2375
+            backup: yes
+          notify: restart docker
+      when: access == 'execute'
+
+    - name: Display result
+      debug:
+        msg: "✅ Successfully applied {{ access }} permissions for {{ user }} on Docker"
+
+    - name: Log permission change
+      lineinfile:
+        path: /var/log/whooper-permissions.log
+        line: "{{ ansible_date_time.iso8601 }} - Docker: {{ user }} granted {{ access }} access"
+        create: yes
+      ignore_errors: yes
+
+  handlers:
+    - name: restart docker
+      systemd:
+        name: docker
+        state: restarted
+        daemon_reload: yes

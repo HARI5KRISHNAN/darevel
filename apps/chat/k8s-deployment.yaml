@@ -1,0 +1,212 @@
+# Kubernetes Deployment for Whooper Backend
+# This file contains all resources needed to deploy the backend to K8s
+
+---
+# ServiceAccount for backend pod
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: whooper-backend
+  namespace: default
+
+---
+# ClusterRole with pod read permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: whooper-pod-reader
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+
+---
+# ClusterRoleBinding to grant permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: whooper-pod-reader-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: whooper-pod-reader
+subjects:
+  - kind: ServiceAccount
+    name: whooper-backend
+    namespace: default
+
+---
+# ConfigMap for non-sensitive configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: whooper-backend-config
+  namespace: default
+data:
+  NODE_ENV: "production"
+  PORT: "5001"
+  POLL_INTERVAL_MS: "15000"
+  EMAIL_APP_URL: "http://email-service:6000/api/send-summary"
+
+---
+# Secret for sensitive data (Gemini API Key)
+# Note: Replace with your actual base64-encoded API key
+# echo -n "your-api-key-here" | base64
+apiVersion: v1
+kind: Secret
+metadata:
+  name: whooper-backend-secrets
+  namespace: default
+type: Opaque
+data:
+  GEMINI_API_KEY: QUl6YVN5QWtVNHlSd1FQd2xqWUdvczVIY1p4bzFHQmxIU1N3MWNRCg==
+  # This is just an example - replace with your actual base64-encoded key
+
+---
+# Deployment for backend
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whooper-backend
+  namespace: default
+  labels:
+    app: whooper-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: whooper-backend
+  template:
+    metadata:
+      labels:
+        app: whooper-backend
+    spec:
+      serviceAccountName: whooper-backend
+      containers:
+        - name: backend
+          image: your-registry/whooper-backend:latest  # Replace with your image
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5001
+              name: http
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: whooper-backend-config
+                  key: NODE_ENV
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: whooper-backend-config
+                  key: PORT
+            - name: POLL_INTERVAL_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: whooper-backend-config
+                  key: POLL_INTERVAL_MS
+            - name: EMAIL_APP_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: whooper-backend-config
+                  key: EMAIL_APP_URL
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: whooper-backend-secrets
+                  key: GEMINI_API_KEY
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5001
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+# Service to expose backend
+apiVersion: v1
+kind: Service
+metadata:
+  name: whooper-backend-service
+  namespace: default
+  labels:
+    app: whooper-backend
+spec:
+  type: ClusterIP  # Use LoadBalancer or NodePort for external access
+  selector:
+    app: whooper-backend
+  ports:
+    - port: 5001
+      targetPort: 5001
+      protocol: TCP
+      name: http
+
+---
+# Optional: Ingress for external access
+# Requires an Ingress Controller (nginx, traefik, etc.)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: whooper-backend-ingress
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"  # Optional: for HTTPS
+spec:
+  rules:
+    - host: whooper-api.yourdomain.com  # Replace with your domain
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: whooper-backend-service
+                port:
+                  number: 5001
+  tls:
+    - hosts:
+        - whooper-api.yourdomain.com
+      secretName: whooper-backend-tls
+
+---
+# Optional: HorizontalPodAutoscaler for auto-scaling
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: whooper-backend-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: whooper-backend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

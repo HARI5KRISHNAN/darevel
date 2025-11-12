@@ -1,0 +1,131 @@
+# AlertManager Configuration for Whooper
+# Routes alerts to email via webhook to Whooper backend
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-whooper
+  namespace: whooper
+type: Opaque
+stringData:
+  alertmanager.yaml: |
+    global:
+      resolve_timeout: 5m
+
+    # Template for alert messages
+    templates:
+      - '/etc/alertmanager/template/*.tmpl'
+
+    # Routing tree
+    route:
+      receiver: 'default'
+      group_by: ['alertname', 'cluster', 'namespace']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      routes:
+        # Critical alerts - send immediately
+        - match:
+            severity: critical
+          receiver: 'whooper-email-critical'
+          group_wait: 10s
+          repeat_interval: 1h
+
+        # Warning alerts - batch and send
+        - match:
+            severity: warning
+          receiver: 'whooper-email-warning'
+          group_wait: 1m
+          repeat_interval: 4h
+
+        # Pod-specific alerts
+        - match:
+            type: pod_failure
+          receiver: 'whooper-email-pod-alerts'
+          group_wait: 30s
+          repeat_interval: 2h
+
+        - match:
+            type: pod_crash_loop
+          receiver: 'whooper-email-pod-alerts'
+          group_wait: 1m
+          repeat_interval: 3h
+
+    # Receivers configuration
+    receivers:
+      # Default receiver (no-op)
+      - name: 'default'
+
+      # Critical alerts - send to Whooper backend webhook
+      - name: 'whooper-email-critical'
+        webhook_configs:
+          - url: 'http://whooper-backend.whooper.svc.cluster.local:5001/api/alerts/webhook'
+            send_resolved: true
+            http_config:
+              follow_redirects: true
+            max_alerts: 10
+
+      # Warning alerts - send to Whooper backend webhook
+      - name: 'whooper-email-warning'
+        webhook_configs:
+          - url: 'http://whooper-backend.whooper.svc.cluster.local:5001/api/alerts/webhook'
+            send_resolved: true
+            http_config:
+              follow_redirects: true
+            max_alerts: 10
+
+      # Pod alerts - send to Whooper backend webhook
+      - name: 'whooper-email-pod-alerts'
+        webhook_configs:
+          - url: 'http://whooper-backend.whooper.svc.cluster.local:5001/api/alerts/webhook'
+            send_resolved: true
+            http_config:
+              follow_redirects: true
+            max_alerts: 10
+
+    # Inhibition rules - suppress certain alerts when others are firing
+    inhibit_rules:
+      # Suppress warning alerts if critical alert is firing for same pod
+      - source_match:
+          severity: 'critical'
+        target_match:
+          severity: 'warning'
+        equal: ['namespace', 'pod']
+
+      # Suppress high CPU/memory alerts if pod is down
+      - source_match:
+          alertname: 'PodDown'
+        target_match_re:
+          alertname: 'High.*'
+        equal: ['namespace', 'pod']
+
+---
+# Custom alert template for better formatting
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-templates
+  namespace: whooper
+data:
+  whooper.tmpl: |
+    {{ define "whooper.title" }}
+    [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .GroupLabels.alertname }}
+    {{ end }}
+
+    {{ define "whooper.text" }}
+    {{ range .Alerts }}
+    Alert: {{ .Labels.alertname }}
+    Severity: {{ .Labels.severity }}
+    {{ if .Labels.namespace }}Namespace: {{ .Labels.namespace }}{{ end }}
+    {{ if .Labels.pod }}Pod: {{ .Labels.pod }}{{ end }}
+    {{ if .Labels.container }}Container: {{ .Labels.container }}{{ end }}
+
+    Description: {{ .Annotations.description }}
+    {{ if .Annotations.action }}
+    Action: {{ .Annotations.action }}
+    {{ end }}
+
+    Started: {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}
+    {{ if .EndsAt }}Ended: {{ .EndsAt.Format "2006-01-02 15:04:05 MST" }}{{ end }}
+    {{ end }}
+    {{ end }}

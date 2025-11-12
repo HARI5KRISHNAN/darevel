@@ -1,0 +1,374 @@
+# Complete Kubernetes Deployment for Whooper Dashboard
+# Includes: Frontend, Backend, RBAC, ConfigMaps, Secrets, Services, Ingress
+
+---
+# Namespace for Whooper application
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: whooper
+  labels:
+    name: whooper
+    app: kubernetes-dashboard
+
+---
+# ServiceAccount for backend pod to access K8s API
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: whooper-backend
+  namespace: whooper
+
+---
+# ClusterRole with pod read permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: whooper-pod-reader
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "namespaces", "events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch"]
+
+---
+# ClusterRoleBinding to grant permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: whooper-pod-reader-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: whooper-pod-reader
+subjects:
+  - kind: ServiceAccount
+    name: whooper-backend
+    namespace: whooper
+
+---
+# ConfigMap for backend configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: whooper-backend-config
+  namespace: whooper
+data:
+  NODE_ENV: "production"
+  PORT: "5001"
+  K8S_NAMESPACE: "default"  # Namespace to monitor (can be changed)
+
+---
+# Secret for sensitive data
+# IMPORTANT: Replace these base64-encoded values with your actual secrets
+# To encode: echo -n "your-value" | base64
+apiVersion: v1
+kind: Secret
+metadata:
+  name: whooper-backend-secrets
+  namespace: whooper
+type: Opaque
+data:
+  # Replace with: echo -n "your-gemini-api-key" | base64
+  GEMINI_API_KEY: ""
+  # Replace with: echo -n "your-email-app-url" | base64
+  EMAIL_APP_URL: ""
+  # Replace with: echo -n "your-email@example.com" | base64
+  DEFAULT_EMAIL_RECIPIENT: ""
+
+---
+# Backend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whooper-backend
+  namespace: whooper
+  labels:
+    app: whooper
+    component: backend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: whooper
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: whooper
+        component: backend
+    spec:
+      serviceAccountName: whooper-backend
+      containers:
+        - name: backend
+          image: your-registry.io/whooper-backend:latest  # Replace with your image
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5001
+              name: http
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: whooper-backend-config
+                  key: NODE_ENV
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: whooper-backend-config
+                  key: PORT
+            - name: K8S_NAMESPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: whooper-backend-config
+                  key: K8S_NAMESPACE
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: whooper-backend-secrets
+                  key: GEMINI_API_KEY
+                  optional: true
+            - name: EMAIL_APP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: whooper-backend-secrets
+                  key: EMAIL_APP_URL
+                  optional: true
+            - name: DEFAULT_EMAIL_RECIPIENT
+              valueFrom:
+                secretKeyRef:
+                  name: whooper-backend-secrets
+                  key: DEFAULT_EMAIL_RECIPIENT
+                  optional: true
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 5001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 5001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+---
+# Backend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: whooper-backend
+  namespace: whooper
+  labels:
+    app: whooper
+    component: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: whooper
+    component: backend
+  ports:
+    - port: 5001
+      targetPort: 5001
+      protocol: TCP
+      name: http
+
+---
+# Frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whooper-frontend
+  namespace: whooper
+  labels:
+    app: whooper
+    component: frontend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: whooper
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app: whooper
+        component: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: your-registry.io/whooper-frontend:latest  # Replace with your image
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: http
+              protocol: TCP
+          env:
+            - name: VITE_BACKEND_URL
+              value: "http://whooper-backend:5001"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+---
+# Frontend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: whooper-frontend
+  namespace: whooper
+  labels:
+    app: whooper
+    component: frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: whooper
+    component: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http
+
+---
+# Ingress for external access
+# Requires an Ingress Controller (nginx, traefik, etc.)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: whooper-ingress
+  namespace: whooper
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # Optional: Enable cert-manager for automatic HTTPS
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  rules:
+    # Frontend
+    - host: whooper.yourdomain.com  # Replace with your domain
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: whooper-frontend
+                port:
+                  number: 80
+    # Backend API
+    - host: whooper-api.yourdomain.com  # Replace with your API domain
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: whooper-backend
+                port:
+                  number: 5001
+  # Uncomment for HTTPS with cert-manager
+  # tls:
+  #   - hosts:
+  #       - whooper.yourdomain.com
+  #       - whooper-api.yourdomain.com
+  #     secretName: whooper-tls
+
+---
+# HorizontalPodAutoscaler for backend
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: whooper-backend-hpa
+  namespace: whooper
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: whooper-backend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+# HorizontalPodAutoscaler for frontend
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: whooper-frontend-hpa
+  namespace: whooper
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: whooper-frontend
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
