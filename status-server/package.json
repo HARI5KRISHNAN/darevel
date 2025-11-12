@@ -1,0 +1,15 @@
+{
+  "name": "darevel-status-server",
+  "version": "2.0.0",
+  "description": "Darevel Suite Health Monitor API",
+  "type": "module",
+  "main": "status-server.js",
+  "scripts": {
+    "start": "node status-server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-fetch": "^2.7.0",
+    "cors": "^2.8.5"
+  }
+}
