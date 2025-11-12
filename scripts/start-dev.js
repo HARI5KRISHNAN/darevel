@@ -1,182 +1,95 @@
 #!/usr/bin/env node
+/**
+ * Darevel Suite - Development Server Launcher
+ * ------------------------------------------------------------
+ * Starts all microservices and frontend apps in development mode
+ * Uses concurrently to run multiple Next.js apps simultaneously
+ */
 
-import { execSync, spawn } from "child_process";
-import { platform } from "os";
-import net from "net";
-import kill from "kill-port";
+import { execSync } from "child_process";
+import { fileURLToPath } from "url";
+import path from "path";
+import fs from "fs";
 
-const isWindows = platform() === "win32";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, "..");
 
-const run = (cmd, options = {}) => {
-  console.log(`\n🟢 Running: ${cmd}`);
+const APPS = [
+  { name: "auth", port: 3005, color: "cyan" },
+  { name: "suite", port: 3002, color: "green" },
+  { name: "mail", port: 3008, color: "yellow" },
+  { name: "drive", port: 3006, color: "blue" },
+  { name: "slides", port: 3000, color: "magenta" },
+  { name: "excel", port: 3004, color: "red" },
+  { name: "notify", port: 3007, color: "gray" },
+  { name: "chat", port: 3003, color: "white" },
+];
+
+function checkSetup() {
+  console.log("🔍 Checking if setup has been run...\n");
+
+  // Check if Docker services are running
   try {
-    execSync(cmd, { stdio: "inherit", ...options });
-  } catch (error) {
-    if (!options.ignoreError) {
-      throw error;
-    }
-  }
-};
-
-const waitForPort = async (host, port, serviceName, timeout = 120000) => {
-  console.log(`⏳ Waiting for ${serviceName} (${host}:${port})...`);
-  const start = Date.now();
-  let dots = 0;
-
-  while (Date.now() - start < timeout) {
-    const socket = new net.Socket();
-    try {
-      await new Promise((resolve, reject) => {
-        socket.setTimeout(3000);
-        socket.once("error", reject);
-        socket.once("timeout", reject);
-        socket.connect(port, host, resolve);
-      });
-      socket.end();
-      console.log(`\n✅ ${serviceName} is ready!`);
-      return;
-    } catch {
-      socket.destroy();
-      process.stdout.write(".");
-      dots++;
-      if (dots % 20 === 0) process.stdout.write(` (${Math.floor((Date.now() - start) / 1000)}s)`);
-      await new Promise((r) => setTimeout(r, 2000));
-    }
-  }
-  throw new Error(`❌ Timeout waiting for ${serviceName} after ${timeout/1000}s`);
-};
-
-const killDarevelPorts = async () => {
-  const ports = [3000, 3002, 3003, 3004, 3005, 3006, 3007, 3008];
-  console.log("\n🧹 Cleaning up existing port allocations...");
-
-  for (const port of ports) {
-    try {
-      await kill(port, "tcp");
-      console.log(`   ✓ Freed port ${port}`);
-    } catch (err) {
-      // Port was not in use, which is fine
-      if (!err.message.includes("No process running on port")) {
-        console.log(`   ℹ Port ${port} already free`);
-      }
-    }
-  }
-
-  console.log("✅ All ports are now available\n");
-};
-
-async function main() {
-  try {
-    console.log("🚀 Darevel Suite - Starting Development Environment\n");
-    console.log("=".repeat(60));
-
-    // 1️⃣ Check if Docker is running
-    console.log("\n📦 Checking Docker...");
-    try {
-      execSync("docker --version", { stdio: "ignore" });
-      console.log("✅ Docker is installed");
-    } catch {
-      console.error("❌ Docker is not installed or not running!");
-      console.error("   Please install Docker Desktop: https://www.docker.com/products/docker-desktop");
-      process.exit(1);
-    }
-
-    // Check if Docker daemon is running
-    try {
-      execSync("docker ps", { stdio: "ignore" });
-      console.log("✅ Docker daemon is running");
-    } catch {
-      console.error("❌ Docker daemon is not running!");
-      console.error("   Please start Docker Desktop");
-      process.exit(1);
-    }
-
-    // 2️⃣ Start Docker services
-    console.log("\n🐳 Starting Docker backend services...");
-    console.log("   - PostgreSQL (port 5432)");
-    console.log("   - Keycloak (port 8080)");
-    console.log("   - Redis (port 6379)");
-
-    run("docker compose up -d");
-
-    // 3️⃣ Wait for services to be ready
-    console.log("\n⏳ Waiting for services to be ready...\n");
-
-    // Wait for Postgres
-    await waitForPort("localhost", 5432, "PostgreSQL", 60000);
-
-    // Wait for Redis
-    await waitForPort("localhost", 6379, "Redis", 30000);
-
-    // Wait for Keycloak (takes longer)
-    await waitForPort("localhost", 8080, "Keycloak", 120000);
-
-    console.log("\n" + "=".repeat(60));
-    console.log("✅ All backend services are ready!\n");
-
-    // 4️⃣ Show service URLs
-    console.log("📍 Infrastructure Services:");
-    console.log("   PostgreSQL (Keycloak):  localhost:5432 (user: keycloak, pass: keycloak)");
-    console.log("   PostgreSQL (App):       localhost:5433 (user: postgres, pass: postgres)");
-    console.log("   Keycloak:               http://localhost:8080 (admin/admin)");
-    console.log("   Redis:                  localhost:6379");
-    console.log("\n📍 Microservices (Spring Boot):");
-    console.log("   API Gateway:     http://localhost:8081");
-    console.log("   User Service:    http://localhost:8082");
-    console.log("   Drive Service:   http://localhost:8083");
-    console.log("   Mail Service:    http://localhost:8084");
-    console.log("   Chat Service:    http://localhost:8085");
-    console.log("   Notify Service:  http://localhost:8086");
-    console.log("   Excel Service:   http://localhost:8087");
-    console.log("   Slides Service:  http://localhost:8088");
-    console.log("\n📍 Frontend Apps:");
-    console.log("   Slides App:      http://localhost:3000 (Next.js)");
-    console.log("   Suite App:       http://localhost:3002 (Next.js)");
-    console.log("   Chat App:        http://localhost:3003 (Vite)");
-    console.log("   Excel App:       http://localhost:3004 (Vite)");
-    console.log("   Auth App:        http://localhost:3005 (Next.js)");
-    console.log("   Drive App:       http://localhost:3006 (Next.js)");
-    console.log("   Notify App:      http://localhost:3007 (Next.js)");
-    console.log("   Mail App:        http://localhost:3008 (Vite)\n");
-
-    console.log("=".repeat(60));
-
-    // 5️⃣ Kill any processes using app ports
-    await killDarevelPorts();
-
-    console.log("🚀 Starting all Darevel apps with Turborepo...\n");
-
-    // 6️⃣ Start all apps via Turborepo
-    const turboProcess = spawn("turbo", ["run", "dev", "--parallel"], {
-      stdio: "inherit",
-      shell: true
-    });
-
-    // Handle process termination
-    const cleanup = () => {
-      console.log("\n\n⏹️  Shutting down apps...");
-      turboProcess.kill();
-      console.log("💡 Tip: Run 'npm run stop' to stop Docker services");
-      process.exit(0);
-    };
-
-    process.on("SIGINT", cleanup);
-    process.on("SIGTERM", cleanup);
-
-    turboProcess.on("exit", (code) => {
-      console.log(`\nTurborepo exited with code ${code}`);
-      console.log("💡 Tip: Run 'npm run stop' to stop Docker services");
-      process.exit(code || 0);
-    });
-
-  } catch (err) {
-    console.error("\n❌ Error starting development environment:");
-    console.error("   " + err.message);
-    console.error("\n💡 Troubleshooting:");
-    console.error("   - Check Docker Desktop is running");
-    console.error("   - Try: docker compose down && docker compose up -d");
-    console.error("   - Check logs: npm run logs");
+    execSync("docker compose ps --format json", { stdio: "pipe", cwd: ROOT });
+  } catch {
+    console.error("❌ Backend services are not running!");
+    console.error("   Please run: npm run setup\n");
     process.exit(1);
+  }
+
+  // Check if auth app has .env.local
+  const authEnv = path.join(ROOT, "apps", "auth", ".env.local");
+  if (!fs.existsSync(authEnv)) {
+    console.error("❌ Environment files not found!");
+    console.error("   Please run: npm run setup\n");
+    process.exit(1);
+  }
+
+  console.log("✅ Setup verified!\n");
+}
+
+function main() {
+  console.log("\n🚀 Starting Darevel Development Servers\n");
+  console.log("====================================================\n");
+
+  checkSetup();
+
+  // Check if concurrently is available
+  try {
+    execSync("npx concurrently --version", { stdio: "ignore" });
+  } catch {
+    console.log("📦 Installing concurrently...");
+    execSync("npm install -D concurrently", { stdio: "inherit", cwd: ROOT });
+  }
+
+  // Build concurrently command
+  const commands = APPS.map(app => {
+    const appPath = path.join(ROOT, "apps", app.name);
+    return `"cd ${appPath} && npm run dev"`;
+  }).join(" ");
+
+  const names = APPS.map(app => `"${app.name}:${app.port}"`).join(",");
+  const colors = APPS.map(app => app.color).join(",");
+
+  console.log("🎯 Starting all frontend apps...\n");
+  console.log("Apps:");
+  APPS.forEach(app => {
+    console.log(`  • ${app.name.padEnd(8)} → http://localhost:${app.port}`);
+  });
+  console.log("\n====================================================");
+  console.log("Press Ctrl+C to stop all servers");
+  console.log("====================================================\n");
+
+  // Run concurrently
+  try {
+    execSync(
+      `npx concurrently --names ${names} --prefix-colors ${colors} ${commands}`,
+      { stdio: "inherit", cwd: ROOT }
+    );
+  } catch (err) {
+    // User pressed Ctrl+C
+    console.log("\n\n✋ Stopping all development servers...");
+    process.exit(0);
   }
 }
 

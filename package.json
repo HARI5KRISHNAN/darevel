@@ -9,6 +9,7 @@
     "packages/*"
   ],
   "scripts": {
+    "setup": "node scripts/setup.js",
     "dev": "node scripts/start-dev.js",
     "dev:apps": "turbo run dev --parallel",
     "dev:docker": "docker compose up -d",
