@@ -5,120 +5,41 @@ import type { NextAuthOptions } from "next-auth";
 export const authOptions: NextAuthOptions = {
   providers: [
     KeycloakProvider({
-      clientId: process.env.KEYCLOAK_CLIENT_ID || "darevel-auth",
-      clientSecret: process.env.KEYCLOAK_CLIENT_SECRET || "darevel-auth-secret-2025",
-      issuer: process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/pilot180",
+      clientId: process.env.KEYCLOAK_CLIENT_ID!,
+      clientSecret: process.env.KEYCLOAK_CLIENT_SECRET!,
+      issuer: process.env.KEYCLOAK_ISSUER!,
     }),
   ],
+  secret: process.env.NEXTAUTH_SECRET,
   cookies: {
     sessionToken: {
-      name: "darevel-session",
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Host-next-auth.session-token"
+          : "next-auth.session-token",
       options: {
         httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: false,
-        domain: ".darevel.local", // Enable SSO across all subdomains
-      }
+        sameSite: "lax",
+        domain: process.env.NEXTAUTH_COOKIE_DOMAIN || ".darevel.local",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+      },
     },
-    callbackUrl: {
-      name: "darevel-callback-url",
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: false,
-        domain: ".darevel.local",
-      }
-    },
-    csrfToken: {
-      name: "darevel-csrf-token",
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: false,
-        domain: ".darevel.local",
-      }
-    },
-    pkceCodeVerifier: {
-      name: "darevel-pkce-code-verifier",
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: false,
-        domain: ".darevel.local",
-      }
-    },
-    state: {
-      name: "darevel-state",
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: false,
-        domain: ".darevel.local",
-      }
-    },
-    nonce: {
-      name: "darevel-nonce",
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: false,
-        domain: ".darevel.local",
-      }
-    }
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 60 * 60 * 24 * 7, // 7 days
   },
   callbacks: {
-    async jwt({ token, account, profile }) {
-      // Persist the OAuth access_token and user info to the token right after signin
-      if (account) {
-        token.accessToken = account.access_token;
-        token.idToken = account.id_token;
-        token.refreshToken = account.refresh_token;
-        token.expiresAt = account.expires_at;
-      }
-
-      if (profile) {
-        token.email = profile.email;
-        token.name = profile.name;
-        token.sub = profile.sub;
-      }
-
-      return token;
-    },
     async session({ session, token }) {
-      // Send properties to the client
-      session.accessToken = token.accessToken as string;
-      session.idToken = token.idToken as string;
-      session.user = {
-        ...session.user,
-        id: token.sub as string,
-      };
+      session.user.id = token.sub;
       return session;
-    },
-    async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url;
-      // Allow redirects to any *.darevel.local subdomain for SSO
-      else if (url.includes('.darevel.local')) return url;
-      return baseUrl;
     },
   },
   pages: {
     signIn: "/signin",
     error: "/error",
   },
-  debug: process.env.NODE_ENV === "development",
 };
 
 const handler = NextAuth(authOptions);
