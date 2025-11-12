@@ -1,567 +1,455 @@
-# Keycloak Auto-Configuration Guide
+# Keycloak SSO Setup for All Darevel Apps
 
-Complete guide to the automatic Keycloak authentication setup for Darevel Suite.
+Complete setup guide for integrating **8 Darevel apps** with Keycloak realm (`pilot180`) for seamless authentication.
 
-## Overview
+## Apps Covered
 
-Keycloak is automatically configured when you run `npm run dev`:
-- **pilot180** realm is created
-- All 6 Darevel app clients are registered
-- 2 test users are created (demo & admin)
-- Everything works out of the box!
+| App      | Port | Client ID          | Description         |
+| -------- | ---- | ------------------ | ------------------- |
+| Auth     | 3005 | darevel-auth       | Login/auth frontend |
+| Chat     | 3003 | darevel-chat       | Chat workspace      |
+| Drive    | 3006 | darevel-drive      | Drive module        |
+| Excel    | 3004 | darevel-excel      | Spreadsheet app     |
+| Notify   | 3007 | darevel-notify     | Notification hub    |
+| Suite    | 3002 | darevel-suite      | Main dashboard      |
+| Mail     | 3008 | darevel-mail       | Mail client         |
+| Slides   | 3000 | darevel-slides     | Presentation app    |
 
-## What Gets Auto-Configured
+---
 
-### Realm: pilot180
+## Step 1: Keycloak Client Configuration
 
-The Darevel authentication realm with:
-- Login with email enabled
-- User registration enabled
-- Password reset enabled
-- Brute force protection enabled
+Open: [http://localhost:8080/admin](http://localhost:8080/admin)
+Login: `admin / admin`
+Realm: `pilot180`
 
-### Clients (6 Applications)
+### For each app, create a client with:
 
-All Darevel apps are pre-configured:
+1. **Client ID**: Use the client ID from the table above (e.g., `darevel-auth`)
+2. **Access Type**: `confidential`
+3. **Valid Redirect URIs**: `http://localhost:<port>/*` (use port from table)
+4. **Web Origins**: `http://localhost:<port>`
 
-| Client ID | App | Port | Redirect URI |
-|-----------|-----|------|--------------|
-| `darevel-suite` | Suite | 3000 | http://localhost:3000/* |
-| `darevel-slides` | Slides | 3001 | http://localhost:3001/* |
-| `darevel-chat` | Chat | 3002 | http://localhost:3002/* |
-| `ai-email-assistant` | Mail | 3003 | http://localhost:3003/* |
-| `darevel-excel` | Excel | 3004 | http://localhost:3004/* |
-| `darevel-drive` | Drive | 3006 | http://localhost:3006/* |
+### Settings to enable:
 
-### Pre-Created Users
+- ✅ *Standard Flow Enabled*
+- ✅ *Direct Access Grants Enabled*
+- ⚙️ *Service Accounts Enabled* (optional)
 
-Two test users are automatically created:
+### After creating each client:
 
-#### Demo User
+1. Go to the **Credentials** tab
+2. Copy the **Secret** value
+3. Update the corresponding `apps/<app-name>/.env.local` file
+4. Replace `<SECRET_FROM_KEYCLOAK_<APPNAME>>` with the actual secret
+
+---
+
+## Step 2: Environment Configuration
+
+All `.env.local` files have been pre-configured in `apps/<app-name>/.env.local` with:
+
+```bash
+NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:8080
+NEXT_PUBLIC_KEYCLOAK_REALM=pilot180
+NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=darevel-<appname>
+KEYCLOAK_CLIENT_SECRET=<SECRET_FROM_KEYCLOAK_<APPNAME>>
+NEXT_PUBLIC_APP_URL=http://localhost:<port>
+```
+
+**Action Required**: Replace `<SECRET_FROM_KEYCLOAK_<APPNAME>>` with the actual client secret from Keycloak for each app.
+
+### Complete list of files to update:
+
+- `apps/suite/.env.local` - Replace `<SECRET_FROM_KEYCLOAK_SUITE>`
+- `apps/auth/.env.local` - Replace `<SECRET_FROM_KEYCLOAK_AUTH>`
+- `apps/chat/.env.local` - Replace `<SECRET_FROM_KEYCLOAK_CHAT>`
+- `apps/drive/.env.local` - Replace `<SECRET_FROM_KEYCLOAK_DRIVE>`
+- `apps/excel/.env.local` - Replace `<SECRET_FROM_KEYCLOAK_EXCEL>`
+- `apps/notify/.env.local` - Replace `<SECRET_FROM_KEYCLOAK_NOTIFY>`
+- `apps/mail/.env.local` - Replace `<SECRET_FROM_KEYCLOAK_MAIL>`
+- `apps/slides/.env.local` - Replace `<SECRET_FROM_KEYCLOAK_SLIDES>`
+
+---
+
+## Step 3: Docker Configuration
+
+The `docker-compose.yml` has been configured with:
+
+```yaml
+keycloak:
+  image: quay.io/keycloak/keycloak:25.0.0
+  container_name: darevel_keycloak
+  environment:
+    - KEYCLOAK_ADMIN=admin
+    - KEYCLOAK_ADMIN_PASSWORD=admin
+    - KC_DB=postgres
+    - KC_DB_URL_HOST=postgres
+    - KC_DB_URL_DATABASE=keycloak
+    - KC_DB_USERNAME=keycloak
+    - KC_DB_PASSWORD=keycloak
+    - KC_HEALTH_ENABLED=true
+    - KC_METRICS_ENABLED=true
+    - PROXY_ADDRESS_FORWARDING=true
+    - KEYCLOAK_FRONTEND_URL=http://localhost:8080
+  command: start-dev --import-realm
+  ports:
+    - "8080:8080"
+  volumes:
+    - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+```
+
+### Restart Keycloak:
+
+```bash
+docker compose restart keycloak
+```
+
+Or start all services:
+
+```bash
+docker compose up -d
+```
+
+---
+
+## Step 4: Testing Authentication
+
+### Test with PowerShell (Windows):
+
+Replace `<app-name>`, `<secret>`, and credentials as needed:
+
+```powershell
+Invoke-WebRequest -Uri "http://localhost:8080/realms/pilot180/protocol/openid-connect/token" `
+  -Method POST `
+  -Body @{
+    grant_type = "password"
+    client_id = "darevel-slides"
+    client_secret = "<SECRET_FROM_KEYCLOAK_SLIDES>"
+    username = "demo@darevel.com"
+    password = "demo123"
+  } `
+  -ContentType "application/x-www-form-urlencoded" | Select-Object -ExpandProperty Content
+```
+
+### Test with curl (Linux/Mac):
+
+```bash
+curl -X POST "http://localhost:8080/realms/pilot180/protocol/openid-connect/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=password" \
+  -d "client_id=darevel-slides" \
+  -d "client_secret=<SECRET_FROM_KEYCLOAK_SLIDES>" \
+  -d "username=demo@darevel.com" \
+  -d "password=demo123"
+```
+
+✅ If you see `access_token` in the response, your configuration is correct!
+
+---
+
+## Step 5: Start All Apps
+
+```bash
+npm run dev
+```
+
+Wait for:
+- "✅ All backend services are ready!"
+- "✓ Ready in …" for all apps
+
+---
+
+## Step 6: Health Check
+
+| Service  | Port | URL                           | Expected Behavior              |
+| -------- | ---- | ----------------------------- | ------------------------------ |
+| Keycloak | 8080 | http://localhost:8080/admin   | Login page                     |
+| Suite    | 3002 | http://localhost:3002         | Redirect to login, then dashboard |
+| Auth     | 3005 | http://localhost:3005         | Login & token refresh          |
+| Chat     | 3003 | http://localhost:3003         | Chat after login               |
+| Drive    | 3006 | http://localhost:3006         | File explorer                  |
+| Excel    | 3004 | http://localhost:3004         | Spreadsheet                    |
+| Notify   | 3007 | http://localhost:3007         | Notifications                  |
+| Mail     | 3008 | http://localhost:3008         | Mail UI                        |
+| Slides   | 3000 | http://localhost:3000         | Slides dashboard               |
+
+---
+
+## Optional: Nginx Proxy Configuration
+
+For pretty URLs like `mail.darevel.local`, add to your Nginx config:
+
+```nginx
+server {
+  listen 80;
+  server_name mail.darevel.local;
+
+  location / {
+    proxy_pass http://localhost:3008;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $remote_addr;
+  }
+}
+
+server {
+  listen 80;
+  server_name slides.darevel.local;
+
+  location / {
+    proxy_pass http://localhost:3000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $remote_addr;
+  }
+}
+
+server {
+  listen 80;
+  server_name suite.darevel.local;
+
+  location / {
+    proxy_pass http://localhost:3002;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $remote_addr;
+  }
+}
+
+server {
+  listen 80;
+  server_name auth.darevel.local;
+
+  location / {
+    proxy_pass http://localhost:3005;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $remote_addr;
+  }
+}
+
+server {
+  listen 80;
+  server_name chat.darevel.local;
+
+  location / {
+    proxy_pass http://localhost:3003;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $remote_addr;
+  }
+}
+
+server {
+  listen 80;
+  server_name drive.darevel.local;
+
+  location / {
+    proxy_pass http://localhost:3006;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $remote_addr;
+  }
+}
+
+server {
+  listen 80;
+  server_name excel.darevel.local;
+
+  location / {
+    proxy_pass http://localhost:3004;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $remote_addr;
+  }
+}
+
+server {
+  listen 80;
+  server_name notify.darevel.local;
+
+  location / {
+    proxy_pass http://localhost:3007;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $remote_addr;
+  }
+}
+```
+
+Then update Keycloak Valid Redirect URIs for each client to include:
+- `http://<app>.darevel.local/*`
+
+And add to `/etc/hosts` (Linux/Mac) or `C:\Windows\System32\drivers\etc\hosts` (Windows):
+
+```
+127.0.0.1 darevel.local
+127.0.0.1 auth.darevel.local
+127.0.0.1 chat.darevel.local
+127.0.0.1 mail.darevel.local
+127.0.0.1 drive.darevel.local
+127.0.0.1 excel.darevel.local
+127.0.0.1 slides.darevel.local
+127.0.0.1 notify.darevel.local
+127.0.0.1 keycloak.darevel.local
+127.0.0.1 suite.darevel.local
+```
+
+---
+
+## Troubleshooting
+
+### Issue: `invalid_client_credentials`
+
+**Solution**: Verify the client secret in `.env.local` matches the secret in Keycloak.
+
+1. Go to Keycloak admin console
+2. Select `pilot180` realm
+3. Click `Clients` in left menu
+4. Click on the client (e.g., `darevel-suite`)
+5. Go to `Credentials` tab
+6. Copy the `Secret` value
+7. Update the corresponding `.env.local` file
+
+### Issue: Keycloak not starting
+
+**Solution**: Check Docker logs:
+
+```bash
+docker logs darevel_keycloak
+```
+
+Common causes:
+- Database connection issues
+- Port 8080 already in use
+- Invalid realm-export.json format
+
+### Issue: Apps not redirecting to Keycloak
+
+**Solution**:
+1. Verify `NEXT_PUBLIC_KEYCLOAK_URL` is set correctly in `.env.local`
+2. Check Keycloak client redirect URIs match your app URL
+3. Clear browser cache and cookies
+4. Restart the app: `npm run dev`
+
+### Issue: Realm not imported
+
+**Solution**:
+1. Verify `./keycloak/realm-export.json` exists
+2. Check Docker logs for import errors: `docker logs darevel_keycloak`
+3. Restart Keycloak: `docker compose restart keycloak`
+4. Look for "Import: realm 'pilot180'" in logs
+
+### Issue: "Client not found"
+
+**Solution**:
+1. Verify the client exists in Keycloak admin console
+2. Check the `NEXT_PUBLIC_KEYCLOAK_CLIENT_ID` matches exactly
+3. Ensure the client is in the `pilot180` realm
+4. Create the client manually if needed (see Step 1)
+
+---
+
+## Pre-Created Test Users
+
+Two test users are available in the `pilot180` realm:
+
+### Demo User
 - **Email:** demo@darevel.com
 - **Password:** demo123
 - **Roles:** user
 - **Use for:** Testing regular user features
 
-#### Admin User
+### Admin User
 - **Email:** admin@darevel.com
 - **Password:** admin123
 - **Roles:** user, admin
 - **Use for:** Testing admin features
 
-## How It Works
+---
 
-### 1. Realm Configuration File
+## Summary
 
-[keycloak/realm-export.json](keycloak/realm-export.json) contains the complete realm configuration:
+✅ All 8 apps configured with Keycloak SSO
+✅ Environment files ready (just add secrets)
+✅ Docker configured with proper settings
+✅ Health checks and testing procedures documented
+✅ Ready for enterprise deployment with shared auth & roles
 
-```json
-{
-  "realm": "pilot180",
-  "enabled": true,
-  "clients": [...],
-  "users": [...]
-}
-```
+---
 
-### 2. Docker Volume Mount
+## Quick Start Checklist
 
-In [docker-compose.yml](docker-compose.yml):
+- [ ] Start Keycloak: `docker compose up -d keycloak`
+- [ ] Access Keycloak admin: http://localhost:8080/admin
+- [ ] Login with `admin / admin`
+- [ ] Select `pilot180` realm
+- [ ] Create 8 clients (one for each app) with settings from Step 1
+- [ ] Copy each client secret from Credentials tab
+- [ ] Update all 8 `.env.local` files with actual secrets
+- [ ] Restart apps: `npm run dev`
+- [ ] Test login on each app
+- [ ] Verify SSO works across all apps
 
-```yaml
-keycloak:
-  command:
-    - start-dev
-    - --import-realm
-  volumes:
-    - ./keycloak:/opt/keycloak/data/import
-```
+---
 
-The `--import-realm` flag tells Keycloak to automatically import all JSON files from `/opt/keycloak/data/import`.
+## Next Steps
 
-### 3. Auto-Import on Startup
+1. **Configure clients in Keycloak** (Step 1)
+2. **Update secrets in `.env.local` files** (Step 2)
+3. **Restart services** (Step 3)
+4. **Test authentication** (Step 4)
+5. **Launch all apps** (Step 5)
+6. **Verify functionality** (Step 6)
 
-When you run `npm run dev`:
-1. Docker starts Keycloak
-2. Keycloak finds `realm-export.json`
-3. Imports the pilot180 realm
-4. Creates all clients and users
-5. Ready to use!
+For issues or questions, refer to:
+- Keycloak documentation: https://www.keycloak.org/docs/latest/
+- OpenID Connect spec: https://openid.net/connect/
+- This project's GitHub issues
 
-## Testing Authentication
+---
 
-### Test Mail App Login
-
-1. **Start the suite:**
-   ```bash
-   npm run dev
-   ```
-
-2. **Open Mail app:**
-   http://localhost:3003
-
-3. **Login:**
-   - Email: demo@darevel.com
-   - Password: demo123
-
-4. **Success!**
-   You should be redirected back to the Mail app dashboard
-
-### Test Other Apps
-
-All apps are configured identically:
-
-```bash
-# Suite
-http://localhost:3000
-
-# Slides
-http://localhost:3001
-
-# Chat
-http://localhost:3002
-
-# Excel
-http://localhost:3004
-
-# Drive
-http://localhost:3006
-```
-
-Use the same credentials:
-- demo@darevel.com / demo123
-- admin@darevel.com / admin123
-
-## Keycloak Admin Console
-
-### Access
-
-**URL:** http://localhost:8080
-
-**Credentials:**
-- Username: admin
-- Password: admin
-
-### What You'll See
-
-**Realms:**
-- master (Keycloak system realm)
-- **pilot180** (Darevel apps realm) ← Your apps use this
-
-**In pilot180 realm:**
-- 6 clients configured
-- 2 users created
-- Roles: user, admin
-
-### Common Tasks
-
-#### View Users
-
-1. Login to Keycloak admin
-2. Select **pilot180** realm (dropdown top-left)
-3. Click **Users** in left menu
-4. See demo@darevel.com and admin@darevel.com
-
-#### View Clients
-
-1. Select **pilot180** realm
-2. Click **Clients** in left menu
-3. See all 6 Darevel app clients
-
-#### Add New User
-
-1. Select **pilot180** realm
-2. Click **Users** → **Add user**
-3. Fill in details:
-   - Username: user@example.com
-   - Email: user@example.com
-   - First name: User
-   - Last name: Example
-4. Click **Create**
-5. Go to **Credentials** tab
-6. Click **Set password**
-7. Enter password, uncheck "Temporary"
-8. Click **Save**
-
-#### Change User Password
-
-1. Select **pilot180** realm
-2. Click **Users**
-3. Find and click user
-4. Go to **Credentials** tab
-5. Click **Reset password**
-6. Enter new password
-7. Uncheck "Temporary" if permanent
-8. Click **Save**
-
-## Integrating Apps with Keycloak
-
-### Configuration Per App
-
-Each app needs these environment variables:
-
-```env
-# Keycloak URL
-KEYCLOAK_URL=http://localhost:8080
-
-# Keycloak Realm
-KEYCLOAK_REALM=pilot180
-
-# Client ID (specific to each app)
-KEYCLOAK_CLIENT_ID=darevel-suite    # for Suite app
-KEYCLOAK_CLIENT_ID=ai-email-assistant  # for Mail app
-KEYCLOAK_CLIENT_ID=darevel-chat     # for Chat app
-# etc...
-```
-
-### Example: Mail App Integration
-
-**Install Keycloak adapter:**
-```bash
-cd apps/mail
-npm install keycloak-js
-```
-
-**Create Keycloak instance:**
-```typescript
-// src/keycloak.ts
-import Keycloak from 'keycloak-js';
-
-const keycloak = new Keycloak({
-  url: 'http://localhost:8080',
-  realm: 'pilot180',
-  clientId: 'ai-email-assistant'
-});
-
-export default keycloak;
-```
-
-**Initialize in app:**
-```typescript
-// src/main.tsx
-import keycloak from './keycloak';
-
-keycloak.init({
-  onLoad: 'login-required',
-  checkLoginIframe: false
-}).then(authenticated => {
-  if (authenticated) {
-    // Render your app
-    ReactDOM.createRoot(document.getElementById('root')!).render(
-      <App />
-    );
-  }
-});
-```
-
-**Get user info:**
-```typescript
-// In your components
-const username = keycloak.tokenParsed?.preferred_username;
-const email = keycloak.tokenParsed?.email;
-const roles = keycloak.tokenParsed?.realm_access?.roles || [];
-```
-
-**Logout:**
-```typescript
-keycloak.logout({
-  redirectUri: 'http://localhost:3003'
-});
-```
-
-## Customizing the Realm
-
-### Edit Realm Configuration
-
-1. **Edit the file:**
-   ```bash
-   code keycloak/realm-export.json
-   ```
-
-2. **Make changes:**
-   - Add more users
-   - Add more clients
-   - Change settings
-
-3. **Restart to apply:**
-   ```bash
-   npm run clean  # Destroys existing realm
-   npm run dev    # Imports updated realm
-   ```
-
-⚠️ **Warning:** `npm run clean` deletes all Keycloak data!
-
-### Add a New Client
-
-Add to `clients` array in `realm-export.json`:
-
-```json
-{
-  "clientId": "my-new-app",
-  "name": "My New App",
-  "rootUrl": "http://localhost:3008",
-  "redirectUris": ["http://localhost:3008/*"],
-  "webOrigins": ["http://localhost:3008", "+"],
-  "publicClient": true,
-  "protocol": "openid-connect",
-  "standardFlowEnabled": true,
-  "directAccessGrantsEnabled": true
-}
-```
-
-### Add a New User
-
-Add to `users` array in `realm-export.json`:
-
-```json
-{
-  "username": "newuser@darevel.com",
-  "enabled": true,
-  "emailVerified": true,
-  "firstName": "New",
-  "lastName": "User",
-  "email": "newuser@darevel.com",
-  "realmRoles": ["user"],
-  "credentials": [
-    {
-      "type": "password",
-      "value": "password123",
-      "temporary": false
-    }
-  ]
-}
-```
-
-### Add Custom Roles
-
-Add to `roles.realm` array:
-
-```json
-{
-  "name": "premium",
-  "description": "Premium subscriber role"
-}
-```
-
-Then assign to users:
-
-```json
-{
-  "username": "premium@darevel.com",
-  "realmRoles": ["user", "premium"],
-  ...
-}
-```
-
-## Production Considerations
-
-### Security
+## Production Deployment Notes
 
 **⚠️ Current setup is for DEVELOPMENT ONLY!**
 
 For production:
 
-1. **Change admin password:**
+1. **Change admin credentials:**
    ```env
-   KEYCLOAK_ADMIN=secure_admin_name
+   KEYCLOAK_ADMIN=your_secure_admin
    KEYCLOAK_ADMIN_PASSWORD=VeryStrongPassword123!
    ```
 
-2. **Use HTTPS:**
-   ```json
-   {
-     "rootUrl": "https://mail.darevel.com",
-     "redirectUris": ["https://mail.darevel.com/*"]
-   }
-   ```
-
-3. **Remove test users:**
-   Delete demo@darevel.com and admin@darevel.com from realm export
-
-4. **Enable email verification:**
-   ```json
-   {
-     "verifyEmail": true,
-     "smtpServer": {
-       "from": "noreply@darevel.com",
-       "host": "smtp.darevel.com",
-       ...
-     }
-   }
-   ```
-
-5. **Use production mode:**
-   ```yaml
-   command:
-     - start
-     - --optimized
-     - --hostname=auth.darevel.com
-   ```
-
-### Backup Realm
-
-**Export current realm:**
-```bash
-docker exec darevel_keycloak \
-  /opt/keycloak/bin/kc.sh export \
-  --dir /tmp/export \
-  --realm pilot180
-
-docker cp darevel_keycloak:/tmp/export/pilot180-realm.json ./backup/
-```
-
-**Restore from backup:**
-```bash
-cp backup/pilot180-realm.json keycloak/realm-export.json
-npm run clean
-npm run dev
-```
-
-## Troubleshooting
-
-### Realm not importing
-
-**Check Docker logs:**
-```bash
-npm run logs:keycloak
-```
-
-**Look for:**
-```
-Import: realm 'pilot180' from file /opt/keycloak/data/import/realm-export.json
-```
-
-**If missing:**
-- Check file exists: `ls keycloak/realm-export.json`
-- Check valid JSON: `cat keycloak/realm-export.json | jq`
-- Check volume mount in docker-compose.yml
-
-### Users can't login
-
-**Check user exists:**
-1. Go to http://localhost:8080
-2. Login with admin/admin
-3. Select pilot180 realm
-4. Click Users
-5. Search for user email
-
-**Reset password:**
-1. Click user
-2. Go to Credentials tab
-3. Click Reset password
-4. Enter new password
-5. Uncheck "Temporary"
-
-### Redirect URI mismatch
-
-**Error message:**
-```
-Invalid redirect URI
-```
-
-**Solution:**
-1. Check client configuration in Keycloak admin
-2. Ensure redirect URI matches exactly:
-   - `http://localhost:3003/*` (with /*)
-3. Update realm-export.json if needed
-4. Restart: `npm run clean && npm run dev`
-
-### Realm already exists
-
-If you see:
-```
-Realm 'pilot180' already exists
-```
-
-**Option 1 - Keep existing:**
-Do nothing, Keycloak keeps the existing realm
-
-**Option 2 - Replace:**
-```bash
-npm run clean  # Destroys ALL data
-npm run dev    # Fresh import
-```
-
-## Advanced Features
-
-### Social Login
-
-Add Google login to realm-export.json:
-
-```json
-{
-  "identityProviders": [
-    {
-      "alias": "google",
-      "providerId": "google",
-      "enabled": true,
-      "config": {
-        "clientId": "your-google-client-id",
-        "clientSecret": "your-google-client-secret"
-      }
-    }
-  ]
-}
-```
-
-### Multi-Factor Authentication
-
-Enable in realm-export.json:
-
-```json
-{
-  "otpPolicyType": "totp",
-  "otpPolicyAlgorithm": "HmacSHA1",
-  "otpPolicyDigits": 6,
-  "otpPolicyPeriod": 30
-}
-```
-
-### Custom Themes
-
-1. Create theme folder:
+2. **Use HTTPS everywhere:**
    ```bash
-   mkdir -p keycloak/themes/darevel
+   NEXT_PUBLIC_KEYCLOAK_URL=https://auth.yourdomain.com
+   NEXT_PUBLIC_APP_URL=https://app.yourdomain.com
    ```
 
-2. Mount in docker-compose.yml:
+3. **Update redirect URIs to HTTPS:**
+   ```
+   https://app.yourdomain.com/*
+   ```
+
+4. **Enable SSL for database connections**
+
+5. **Use production Keycloak mode:**
    ```yaml
-   volumes:
-     - ./keycloak/themes:/opt/keycloak/themes
+   command: start --optimized --hostname=auth.yourdomain.com
    ```
 
-3. Set in realm-export.json:
-   ```json
-   {
-     "loginTheme": "darevel",
-     "accountTheme": "darevel"
-   }
-   ```
+6. **Enable email verification and password policies**
 
-## Resources
+7. **Set up proper SSL certificates**
 
-- [Keycloak Documentation](https://www.keycloak.org/documentation)
-- [Keycloak JS Adapter](https://www.keycloak.org/docs/latest/securing_apps/index.html#_javascript_adapter)
-- [Realm Import/Export](https://www.keycloak.org/docs/latest/server_admin/index.html#_export_import)
-- [OpenID Connect](https://openid.net/connect/)
+8. **Configure rate limiting and brute force protection**
+
+9. **Regular backups of Keycloak database**
+
+10. **Monitor Keycloak logs and metrics**
 
 ---
 
-**Quick Reference:**
-
-```bash
-# Access Keycloak admin
-http://localhost:8080
-Username: admin
-Password: admin
-
-# Test users
-demo@darevel.com / demo123
-admin@darevel.com / admin123
-
-# Reset realm
-npm run clean && npm run dev
-
-# View logs
-npm run logs:keycloak
-```
+**Last Updated:** 2025-11-12
