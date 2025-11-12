@@ -1,75 +1,66 @@
-import NextAuth from "next-auth";
-import KeycloakProvider from "next-auth/providers/keycloak";
-import type { NextAuthOptions } from "next-auth";
+import NextAuth from "next-auth"
+import KeycloakProvider from "next-auth/providers/keycloak"
+import { NextAuthOptions } from "next-auth"
+
+const keycloakIssuer = process.env.KEYCLOAK_URL
+  ? `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}`
+  : "http://keycloak.darevel.local:8080/realms/darevel"
 
 export const authOptions: NextAuthOptions = {
   providers: [
     KeycloakProvider({
-      clientId: process.env.KEYCLOAK_CLIENT_ID!,
-      clientSecret: process.env.KEYCLOAK_CLIENT_SECRET!,
-      issuer: process.env.KEYCLOAK_ISSUER!,
+      clientId: process.env.KEYCLOAK_CLIENT_ID || "darevel-auth",
+      clientSecret: process.env.KEYCLOAK_CLIENT_SECRET || "darevel-auth-secret-2025",
+      issuer: keycloakIssuer,
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.preferred_username || profile.name,
+          email: profile.email,
+          image: profile.picture ?? null,
+        }
+      },
     }),
   ],
-  secret: process.env.NEXTAUTH_SECRET,
+
   session: {
     strategy: "jwt",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
   },
+
   jwt: {
-    // Enable JWT encryption to prevent "Invalid Compact JWE" errors
-    encryption: true,
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    secret: process.env.NEXTAUTH_SECRET || "darevel-nextauth-secret",
   },
-  cookies: {
-    sessionToken: {
-      name:
-        process.env.NODE_ENV === "production"
-          ? "__Host-next-auth.session-token"
-          : "next-auth.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        // Use localhost for development to avoid cookie domain issues
-        domain: process.env.NEXTAUTH_COOKIE_DOMAIN || undefined,
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-      },
-    },
-  },
-  callbacks: {
-    async jwt({ token, account, profile }) {
-      // Persist the OAuth access_token and refresh_token to the token right after signin
-      if (account) {
-        token.accessToken = account.access_token;
-        token.refreshToken = account.refresh_token;
-        token.idToken = account.id_token;
-      }
-      if (profile) {
-        token.email = profile.email;
-        token.name = profile.name;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      // Only send minimal essential properties to the client to reduce cookie size
-      // This prevents "Session cookie exceeds allowed 4096 bytes" error
-      session.user = {
-        id: token.sub || '',
-        name: token.name || '',
-        email: token.email || '',
-      };
-      // Store access token for API calls (can be retrieved from session on server-side)
-      session.accessToken = token.accessToken;
-      return session;
-    },
-  },
+
   pages: {
     signIn: "/signin",
-    error: "/error",
+    error: "/signin",
   },
-  debug: process.env.NODE_ENV === "development",
-};
 
-const handler = NextAuth(authOptions);
+  callbacks: {
+    async session({ session, token }) {
+      if (token) {
+        session.user = {
+          ...session.user,
+          id: token.sub,
+          name: token.name,
+          email: token.email,
+        }
+      }
+      return session
+    },
+    async jwt({ token, account, profile }) {
+      if (account && profile) {
+        token.accessToken = account.access_token
+        token.refreshToken = account.refresh_token
+        token.id = profile.sub
+      }
+      return token
+    },
+  },
 
-export { handler as GET, handler as POST };
+  debug: false, // turn on temporarily if you need to see raw logs
+  secret: process.env.NEXTAUTH_SECRET || "darevel-nextauth-secret",
+}
+
+const handler = NextAuth(authOptions)
+export { handler as GET, handler as POST }
