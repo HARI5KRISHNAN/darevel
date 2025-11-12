@@ -11,6 +11,15 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
+  session: {
+    strategy: "jwt",
+    maxAge: 60 * 60 * 24 * 7, // 7 days
+  },
+  jwt: {
+    // Enable JWT encryption to prevent "Invalid Compact JWE" errors
+    encryption: true,
+    maxAge: 60 * 60 * 24 * 7, // 7 days
+  },
   cookies: {
     sessionToken: {
       name:
@@ -20,19 +29,30 @@ export const authOptions: NextAuthOptions = {
       options: {
         httpOnly: true,
         sameSite: "lax",
-        domain: process.env.NEXTAUTH_COOKIE_DOMAIN || ".darevel.local",
+        // Use localhost for development to avoid cookie domain issues
+        domain: process.env.NEXTAUTH_COOKIE_DOMAIN || undefined,
         secure: process.env.NODE_ENV === "production",
         path: "/",
       },
     },
   },
-  session: {
-    strategy: "jwt",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-  },
   callbacks: {
+    async jwt({ token, account, profile }) {
+      // Persist the OAuth access_token and refresh_token to the token right after signin
+      if (account) {
+        token.accessToken = account.access_token;
+        token.refreshToken = account.refresh_token;
+        token.idToken = account.id_token;
+      }
+      if (profile) {
+        token.email = profile.email;
+      }
+      return token;
+    },
     async session({ session, token }) {
+      // Send properties to the client
       session.user.id = token.sub;
+      session.accessToken = token.accessToken;
       return session;
     },
   },
@@ -40,6 +60,7 @@ export const authOptions: NextAuthOptions = {
     signIn: "/signin",
     error: "/error",
   },
+  debug: process.env.NODE_ENV === "development",
 };
 
 const handler = NextAuth(authOptions);
