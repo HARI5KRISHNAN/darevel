@@ -45,7 +45,49 @@ Realm: `pilot180`
 
 ---
 
-## Step 2: Environment Configuration
+## Step 2: Environment Configuration (Automated)
+
+### Option A: Automated Setup (Recommended)
+
+We provide automated scripts to fetch client secrets and configure all `.env.local` files automatically.
+
+#### For Linux / WSL / Git Bash:
+
+```bash
+# Make script executable (first time only)
+chmod +x scripts/setup-envs.sh
+
+# Run the script
+./scripts/setup-envs.sh
+```
+
+#### For Windows PowerShell:
+
+```powershell
+# Run the script from repository root
+.\scripts\setup-envs.ps1
+```
+
+**What the scripts do:**
+1. Connect to Keycloak admin API using `admin/admin` credentials
+2. Query the `pilot180` realm for all 8 client configurations
+3. Fetch each client's secret from the Credentials endpoint
+4. Write complete `.env.local` files to `apps/<appname>/.env.local`
+5. Backup any existing `.env.local` files to `.env.local.bak.<timestamp>`
+
+**Requirements:**
+- **Bash script**: `curl` and `jq` installed
+- **PowerShell script**: PowerShell 5.1+ (built into Windows)
+- Keycloak must be running on `http://localhost:8080`
+- All 8 clients must exist in the `pilot180` realm
+
+After running the script, skip to **Step 3**.
+
+---
+
+### Option B: Manual Configuration
+
+If you prefer not to use the automated scripts, follow these steps:
 
 All `.env.local` files have been pre-configured in `apps/<app-name>/.env.local` with:
 
@@ -59,7 +101,20 @@ NEXT_PUBLIC_APP_URL=http://localhost:<port>
 
 **Action Required**: Replace `<SECRET_FROM_KEYCLOAK_<APPNAME>>` with the actual client secret from Keycloak for each app.
 
-### Complete list of files to update:
+#### Manual steps to get client secrets:
+
+1. Open Keycloak Admin Console: http://localhost:8080/admin
+2. Login with `admin / admin`
+3. Select `pilot180` realm (dropdown top-left)
+4. Click **Clients** in the left menu
+5. Click on a client (e.g., `darevel-suite`)
+6. Go to the **Credentials** tab
+7. Copy the **Secret** value
+8. Open `apps/suite/.env.local` in a text editor
+9. Replace `<SECRET_FROM_KEYCLOAK_SUITE>` with the copied secret
+10. Repeat for all 8 apps
+
+#### Complete list of files to update:
 
 - `apps/suite/.env.local` - Replace `<SECRET_FROM_KEYCLOAK_SUITE>`
 - `apps/auth/.env.local` - Replace `<SECRET_FROM_KEYCLOAK_AUTH>`
@@ -381,13 +436,31 @@ Two test users are available in the `pilot180` realm:
 
 ## Quick Start Checklist
 
+### Using Automated Scripts (Recommended):
+
 - [ ] Start Keycloak: `docker compose up -d keycloak`
 - [ ] Access Keycloak admin: http://localhost:8080/admin
 - [ ] Login with `admin / admin`
 - [ ] Select `pilot180` realm
 - [ ] Create 8 clients (one for each app) with settings from Step 1
-- [ ] Copy each client secret from Credentials tab
-- [ ] Update all 8 `.env.local` files with actual secrets
+- [ ] Run setup script:
+  - **Linux/WSL/Git Bash**: `./scripts/setup-envs.sh`
+  - **Windows PowerShell**: `.\scripts\setup-envs.ps1`
+- [ ] Restart apps: `npm run dev`
+- [ ] Test login on each app
+- [ ] Verify SSO works across all apps
+
+### Manual Setup (Alternative):
+
+- [ ] Start Keycloak: `docker compose up -d keycloak`
+- [ ] Access Keycloak admin: http://localhost:8080/admin
+- [ ] Login with `admin / admin`
+- [ ] Select `pilot180` realm
+- [ ] Create 8 clients (one for each app) with settings from Step 1
+- [ ] For each client:
+  - [ ] Go to Credentials tab
+  - [ ] Copy the Secret value
+  - [ ] Update corresponding `apps/<app>/.env.local` file
 - [ ] Restart apps: `npm run dev`
 - [ ] Test login on each app
 - [ ] Verify SSO works across all apps
