@@ -112,10 +112,12 @@ async function main() {
     console.log("\n📍 Frontend Apps:");
     console.log("   Slides App:      http://localhost:3000 (Next.js)");
     console.log("   Suite App:       http://localhost:3002 (Next.js)");
-    console.log("   Mail App:        http://localhost:3004 (Vite)");
+    console.log("   Chat App:        http://localhost:3003 (Vite)");
+    console.log("   Excel App:       http://localhost:3004 (Vite)");
     console.log("   Auth App:        http://localhost:3005 (Next.js)");
     console.log("   Drive App:       http://localhost:3006 (Next.js)");
-    console.log("   Notify App:      http://localhost:3007 (Next.js)\n");
+    console.log("   Notify App:      http://localhost:3007 (Next.js)");
+    console.log("   Mail App:        http://localhost:3008 (Vite)\n");
 
     console.log("=".repeat(60));
     console.log("\n🚀 Starting all Darevel apps with Turborepo...\n");
