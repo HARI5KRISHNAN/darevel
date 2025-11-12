@@ -3,6 +3,7 @@
 import { execSync, spawn } from "child_process";
 import { platform } from "os";
 import net from "net";
+import kill from "kill-port";
 
 const isWindows = platform() === "win32";
 
@@ -43,6 +44,25 @@ const waitForPort = async (host, port, serviceName, timeout = 120000) => {
     }
   }
   throw new Error(`❌ Timeout waiting for ${serviceName} after ${timeout/1000}s`);
+};
+
+const killDarevelPorts = async () => {
+  const ports = [3000, 3002, 3003, 3004, 3005, 3006, 3007, 3008];
+  console.log("\n🧹 Cleaning up existing port allocations...");
+
+  for (const port of ports) {
+    try {
+      await kill(port, "tcp");
+      console.log(`   ✓ Freed port ${port}`);
+    } catch (err) {
+      // Port was not in use, which is fine
+      if (!err.message.includes("No process running on port")) {
+        console.log(`   ℹ Port ${port} already free`);
+      }
+    }
+  }
+
+  console.log("✅ All ports are now available\n");
 };
 
 async function main() {
@@ -120,9 +140,13 @@ async function main() {
     console.log("   Mail App:        http://localhost:3008 (Vite)\n");
 
     console.log("=".repeat(60));
-    console.log("\n🚀 Starting all Darevel apps with Turborepo...\n");
 
-    // 5️⃣ Start all apps via Turborepo
+    // 5️⃣ Kill any processes using app ports
+    await killDarevelPorts();
+
+    console.log("🚀 Starting all Darevel apps with Turborepo...\n");
+
+    // 6️⃣ Start all apps via Turborepo
     const turboProcess = spawn("turbo", ["run", "dev", "--parallel"], {
       stdio: "inherit",
       shell: true
