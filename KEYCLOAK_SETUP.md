@@ -231,9 +231,58 @@ Wait for:
 
 ---
 
-## Optional: Nginx Proxy Configuration
+## Step 7: Optional Nginx Reverse Proxy (Recommended)
 
-For pretty URLs like `mail.darevel.local`, add to your Nginx config:
+For production-ready deployment with unified domains like `mail.darevel.local`, use the included Nginx configuration.
+
+### Quick Setup
+
+The Nginx reverse proxy is **already configured** in the repository and provides:
+- ✅ Fixes 502 Bad Gateway errors
+- ✅ Resolves Keycloak 1-second refresh loop
+- ✅ Unified `.darevel.local` domain structure for all apps
+- ✅ WebSocket support for Next.js Hot Module Replacement
+
+**See [NGINX_SETUP.md](NGINX_SETUP.md) for complete setup instructions.**
+
+### Quick Start
+
+1. **Update hosts file** (Windows: `C:\Windows\System32\drivers\etc\hosts`, Linux/Mac: `/etc/hosts`):
+
+```
+127.0.0.1 suite.darevel.local auth.darevel.local chat.darevel.local drive.darevel.local excel.darevel.local notify.darevel.local mail.darevel.local slides.darevel.local keycloak.darevel.local api.darevel.local darevel.local
+```
+
+2. **Start Nginx**:
+
+```bash
+docker compose up -d nginx
+```
+
+3. **Access your apps**:
+   - Suite: http://suite.darevel.local
+   - Keycloak: http://keycloak.darevel.local
+   - Mail: http://mail.darevel.local
+   - Drive: http://drive.darevel.local
+   - Chat: http://chat.darevel.local
+   - Slides: http://slides.darevel.local
+   - Excel: http://excel.darevel.local
+   - Notify: http://notify.darevel.local
+   - API: http://api.darevel.local
+
+### Configuration Files
+
+- `nginx/nginx.conf` - Main Nginx configuration
+- `nginx/conf.d/darevel.conf` - App routing configuration
+- `docker-compose.yml` - Nginx service definition
+
+For detailed configuration, troubleshooting, and production deployment, see **[NGINX_SETUP.md](NGINX_SETUP.md)**.
+
+---
+
+## Advanced: Custom Nginx Configuration (Manual)
+
+If you prefer to configure Nginx manually or need custom routing:
 
 ```nginx
 server {
