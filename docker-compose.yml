@@ -323,6 +323,18 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Status Server
+  darevel_status:
+    build:
+      context: ./status-server
+      dockerfile: Dockerfile
+    container_name: darevel_status
+    ports:
+      - "3010:3010"
+    networks:
+      - default
+    restart: unless-stopped
+
   # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
@@ -350,6 +362,7 @@ services:
           - excel.darevel.local
           - slides.darevel.local
           - notify.darevel.local
+          - status.darevel.local
           - api.darevel.local
           - keycloak.darevel.local
 
