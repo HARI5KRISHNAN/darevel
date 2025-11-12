@@ -280,6 +280,98 @@ For detailed configuration, troubleshooting, and production deployment, see **[N
 
 ---
 
+## Step 8: Update Keycloak Client Configuration for Domain-Based URLs
+
+After setting up Nginx with `.darevel.local` domains, you need to update Keycloak client settings to allow authentication from these domain URLs.
+
+### Update Client Settings in Keycloak Admin Console
+
+For **each client** (darevel-auth, darevel-suite, darevel-chat, etc.):
+
+1. Open Keycloak Admin Console: http://keycloak.darevel.local:8080/admin
+2. Login with `admin / admin`
+3. Select `pilot180` realm (dropdown top-left)
+4. Click **Clients** in the left menu
+5. Click on a client (e.g., `darevel-auth`)
+6. Update the following settings:
+
+#### Valid Redirect URIs
+
+Add domain-based URLs alongside localhost URLs:
+
+```
+http://localhost:3005/*
+http://auth.darevel.local/*
+```
+
+For other apps, use their respective domains:
+- **darevel-suite**: `http://suite.darevel.local/*`
+- **darevel-chat**: `http://chat.darevel.local/*`
+- **darevel-drive**: `http://drive.darevel.local/*`
+- **darevel-excel**: `http://excel.darevel.local/*`
+- **darevel-mail**: `http://mail.darevel.local/*`
+- **darevel-slides**: `http://slides.darevel.local/*`
+- **darevel-notify**: `http://notify.darevel.local/*`
+
+#### Web Origins
+
+Add domain-based origins for CORS support:
+
+```
+http://localhost:3005
+http://auth.darevel.local
+http://suite.darevel.local
+http://drive.darevel.local
+http://chat.darevel.local
+http://slides.darevel.local
+http://excel.darevel.local
+http://mail.darevel.local
+http://notify.darevel.local
+http://*.darevel.local
+```
+
+**Note**: The wildcard `http://*.darevel.local` allows all subdomains for easier cross-app SSO.
+
+7. Click **Save**
+8. Repeat for all other clients
+
+### Environment Variables for Domain-Based Setup
+
+Your `.env.local` files should be configured with domain URLs:
+
+#### apps/auth/.env.local
+```env
+NEXT_PUBLIC_KEYCLOAK_URL=http://keycloak.darevel.local:8080
+KEYCLOAK_ISSUER=http://keycloak.darevel.local:8080/realms/pilot180
+NEXTAUTH_URL=http://auth.darevel.local
+NEXTAUTH_COOKIE_DOMAIN=.darevel.local
+NEXT_PUBLIC_SUITE_URL=http://suite.darevel.local
+```
+
+#### apps/suite/.env.local
+```env
+NEXT_PUBLIC_KEYCLOAK_URL=http://keycloak.darevel.local:8080
+KEYCLOAK_ISSUER=http://keycloak.darevel.local:8080/realms/pilot180
+NEXTAUTH_URL=http://suite.darevel.local
+NEXT_PUBLIC_AUTH_URL=http://auth.darevel.local
+NEXTAUTH_COOKIE_DOMAIN=.darevel.local
+```
+
+### Testing the Configuration
+
+After updating Keycloak client settings:
+
+1. Clear browser cookies for `.darevel.local`
+2. Restart all Next.js apps: `npm run dev`
+3. Visit http://suite.darevel.local
+4. You should be redirected to http://auth.darevel.local for login
+5. After successful login, you'll be redirected back to Suite
+6. Visit http://drive.darevel.local - you should already be logged in (SSO)
+
+✅ If you can access all apps without logging in again, SSO is working correctly!
+
+---
+
 ## Advanced: Custom Nginx Configuration (Manual)
 
 If you prefer to configure Nginx manually or need custom routing:

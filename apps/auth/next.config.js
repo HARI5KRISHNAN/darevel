@@ -17,6 +17,16 @@ const nextConfig = {
       'http://localhost:3008', // Mail
       'http://localhost:8080', // Keycloak
       'http://localhost:8081', // API Gateway
+      // Domain-based origins for SSO
+      'http://auth.darevel.local',
+      'http://suite.darevel.local',
+      'http://drive.darevel.local',
+      'http://chat.darevel.local',
+      'http://slides.darevel.local',
+      'http://excel.darevel.local',
+      'http://mail.darevel.local',
+      'http://notify.darevel.local',
+      'http://keycloak.darevel.local:8080',
     ],
   },
 };

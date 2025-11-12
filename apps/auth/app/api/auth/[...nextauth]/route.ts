@@ -46,12 +46,19 @@ export const authOptions: NextAuthOptions = {
       }
       if (profile) {
         token.email = profile.email;
+        token.name = profile.name;
       }
       return token;
     },
     async session({ session, token }) {
-      // Send properties to the client
-      session.user.id = token.sub;
+      // Only send minimal essential properties to the client to reduce cookie size
+      // This prevents "Session cookie exceeds allowed 4096 bytes" error
+      session.user = {
+        id: token.sub || '',
+        name: token.name || '',
+        email: token.email || '',
+      };
+      // Store access token for API calls (can be retrieved from session on server-side)
       session.accessToken = token.accessToken;
       return session;
     },
