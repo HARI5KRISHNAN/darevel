@@ -18,6 +18,57 @@ export const authOptions: NextAuthOptions = {
         sameSite: 'lax',
         path: '/',
         secure: false,
+        domain: ".darevel.local",
+      }
+    },
+    callbackUrl: {
+      name: `next-auth.callback-url.drive`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false,
+        domain: ".darevel.local",
+      }
+    },
+    csrfToken: {
+      name: `next-auth.csrf-token.drive`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false,
+        domain: ".darevel.local",
+      }
+    },
+    pkceCodeVerifier: {
+      name: `next-auth.pkce.code_verifier.drive`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false,
+        domain: ".darevel.local",
+      }
+    },
+    state: {
+      name: `next-auth.state.drive`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false,
+        domain: ".darevel.local",
+      }
+    },
+    nonce: {
+      name: `next-auth.nonce.drive`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false,
+        domain: ".darevel.local",
       }
     }
   },
@@ -49,6 +100,18 @@ export const authOptions: NextAuthOptions = {
       };
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url;
+      // Allow redirects to any *.darevel.local subdomain for SSO
+      else if (url.includes('.darevel.local')) return url;
+      return baseUrl;
+    },
+  },
+  pages: {
+    signIn: "/signin",
   },
   debug: process.env.NODE_ENV === "development",
 };

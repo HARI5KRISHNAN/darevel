@@ -1,76 +1,66 @@
-import NextAuth from "next-auth";
-import KeycloakProvider from "next-auth/providers/keycloak";
-import type { NextAuthOptions } from "next-auth";
+import NextAuth from "next-auth"
+import KeycloakProvider from "next-auth/providers/keycloak"
+import { NextAuthOptions } from "next-auth"
+
+const keycloakIssuer = process.env.KEYCLOAK_URL
+  ? `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}`
+  : "http://keycloak.darevel.local:8080/realms/darevel"
 
 export const authOptions: NextAuthOptions = {
   providers: [
     KeycloakProvider({
       clientId: process.env.KEYCLOAK_CLIENT_ID || "darevel-auth",
       clientSecret: process.env.KEYCLOAK_CLIENT_SECRET || "darevel-auth-secret-2025",
-      issuer: process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/pilot180",
+      issuer: keycloakIssuer,
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.preferred_username || profile.name,
+          email: profile.email,
+          image: profile.picture ?? null,
+        }
+      },
     }),
   ],
-  cookies: {
-    sessionToken: {
-      name: "darevel-session",
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: false,
-        domain: ".darevel.local", // Enable SSO across all subdomains
-      }
-    }
-  },
+
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  callbacks: {
-    async jwt({ token, account, profile }) {
-      // Persist the OAuth access_token and user info to the token right after signin
-      if (account) {
-        token.accessToken = account.access_token;
-        token.idToken = account.id_token;
-        token.refreshToken = account.refresh_token;
-        token.expiresAt = account.expires_at;
-      }
 
-      if (profile) {
-        token.email = profile.email;
-        token.name = profile.name;
-        token.sub = profile.sub;
-      }
-
-      return token;
-    },
-    async session({ session, token }) {
-      // Send properties to the client
-      session.accessToken = token.accessToken as string;
-      session.idToken = token.idToken as string;
-      session.user = {
-        ...session.user,
-        id: token.sub as string,
-      };
-      return session;
-    },
-    async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url;
-      // Allow redirects to any *.darevel.local subdomain for SSO
-      else if (url.includes('.darevel.local')) return url;
-      return baseUrl;
-    },
+  jwt: {
+    secret: process.env.NEXTAUTH_SECRET || "darevel-nextauth-secret",
   },
+
   pages: {
     signIn: "/signin",
-    error: "/error",
+    error: "/signin",
   },
-  debug: process.env.NODE_ENV === "development",
-};
 
-const handler = NextAuth(authOptions);
+  callbacks: {
+    async session({ session, token }) {
+      if (token) {
+        session.user = {
+          ...session.user,
+          id: token.sub,
+          name: token.name,
+          email: token.email,
+        }
+      }
+      return session
+    },
+    async jwt({ token, account, profile }) {
+      if (account && profile) {
+        token.accessToken = account.access_token
+        token.refreshToken = account.refresh_token
+        token.id = profile.sub
+      }
+      return token
+    },
+  },
 
-export { handler as GET, handler as POST };
+  debug: false, // turn on temporarily if you need to see raw logs
+  secret: process.env.NEXTAUTH_SECRET || "darevel-nextauth-secret",
+}
+
+const handler = NextAuth(authOptions)
+export { handler as GET, handler as POST }

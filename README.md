@@ -20,14 +20,14 @@ darevel-suite/
 
 ## Apps (8/8 Complete)
 
-- **Suite** (`apps/suite`) - Main dashboard for accessing all apps (Port 3000)
-- **Slides** (`apps/slides`) - Presentation software (Port 3001)
-- **Chat** (`apps/chat`) - Real-time messaging with AI (Port 3002)
-- **Mail** (`apps/mail`) - Email client (Port 3003)
+- **Slides** (`apps/slides`) - Presentation software (Port 3000)
+- **Suite** (`apps/suite`) - Main dashboard for accessing all apps (Port 3002)
+- **Chat** (`apps/chat`) - Real-time messaging with AI (Port 3003)
 - **Excel** (`apps/excel`) - AI-powered spreadsheet (Port 3004)
-- **Auth** (`apps/auth`) - Authentication service (Port 3005)
+- **Auth** (`apps/auth`) - Authentication service with Keycloak SSO (Port 3005)
 - **Drive** (`apps/drive`) - Cloud storage (Port 3006)
 - **Notify** (`apps/notify`) - Real-time notifications (Port 3007)
+- **Mail** (`apps/mail`) - Email client (Port 3008)
 
 ## Getting Started
 
@@ -37,52 +37,71 @@ darevel-suite/
 - npm, yarn, or pnpm
 - Docker Desktop (for backend services)
 
-### Installation
+### One-Command Setup ⚡
+
+Clone the repo and run just **one command** to set everything up:
 
 ```bash
-# Install dependencies
+# 1. Install dependencies
 npm install
+
+# 2. Run automated setup (first time only)
+npm run setup
 ```
 
-### Start Development Environment
+The `setup` script will automatically:
+- ✅ Check if Docker is running (and start it if needed)
+- ✅ Start all backend services (PostgreSQL, Keycloak, Redis)
+- ✅ Wait for services to be ready
+- ✅ Generate secure secrets (NEXTAUTH_SECRET, etc.)
+- ✅ Create `.env.local` files for all 8 apps
+- ✅ Configure Keycloak client with proper OAuth settings
+- ✅ Sync authentication config across all apps
 
-**One command to start everything:**
+After setup completes, start development with:
 
 ```bash
 npm run dev
 ```
 
-This automatically:
-1. Starts Docker services (PostgreSQL, Keycloak, Redis)
-2. Waits for all services to be ready
-3. Starts all 8 apps with Turborepo
-
-See [DOCKER_SETUP.md](DOCKER_SETUP.md) for detailed Docker documentation.
+This will start all 8 frontend apps simultaneously!
 
 ### Quick Commands
 
 ```bash
-npm run dev        # Start everything (Docker + apps)
+npm run setup      # One-time automated setup (Docker + Keycloak + env files)
+npm run dev        # Start all 8 apps in development mode
 npm run dev:apps   # Start only apps (Docker must be running)
 npm run dev:docker # Start only Docker services
 npm run stop       # Stop all Docker services
+npm run clean      # Stop and remove all Docker volumes
 npm run build      # Build all apps
+npm run killports  # Kill processes on app ports (3000-3008)
 ```
 
-See [COMMANDS.md](COMMANDS.md) for complete command reference.
+### Backend Services
+
+After running `npm run setup`, these services will be available:
+
+- 🧠 **Keycloak** - http://localhost:8080 (admin/admin)
+- 🗃️ **PostgreSQL** - localhost:5433
+- ⚡ **Redis** - localhost:6379
+- 🌐 **API Gateway** - http://localhost:8081
+
+See [DOCKER_SETUP.md](DOCKER_SETUP.md) for detailed Docker documentation.
 
 ### Individual App Development
 
 Each app runs on its own port:
 
-- Suite: http://localhost:3000
-- Slides: http://localhost:3001
-- Chat: http://localhost:3002
-- Mail: http://localhost:3003
+- Slides: http://localhost:3000
+- Suite: http://localhost:3002
+- Chat: http://localhost:3003
 - Excel: http://localhost:3004
 - Auth: http://localhost:3005
 - Drive: http://localhost:3006
 - Notify: http://localhost:3007
+- Mail: http://localhost:3008
 
 To run a specific app:
 

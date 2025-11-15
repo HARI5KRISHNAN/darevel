@@ -1,0 +1,172 @@
+---
+# Ansible Playbook: Git Server Permission Management
+# Manages user permissions in Git repositories (GitLab, Gitea, GitHub Enterprise)
+
+- name: Manage Git User Permissions
+  hosts: git
+  become: yes
+  gather_facts: yes
+  vars:
+    user: "{{ user | default('') }}"
+    access: "{{ access | default('read') }}"
+    git_server_type: "{{ git_server_type | default('gitea') }}"  # gitea, gitlab, github
+    git_repo: "{{ git_repo | default('whooper/main-repo') }}"
+    git_api_url: "{{ git_api_url | default('http://localhost:3000/api/v1') }}"
+    git_api_token: "{{ lookup('env', 'GIT_API_TOKEN') | default('', true) }}"
+
+  tasks:
+    - name: Validate required parameters
+      fail:
+        msg: "User parameter is required"
+      when: user == ''
+
+    - name: Display permission update details
+      debug:
+        msg: "Setting {{ access }} access for user {{ user }} on {{ git_server_type }} repository {{ git_repo }}"
+
+    # Gitea-specific permissions
+    - name: Grant Gitea read access
+      uri:
+        url: "{{ git_api_url }}/repos/{{ git_repo }}/collaborators/{{ user }}"
+        method: PUT
+        headers:
+          Authorization: "token {{ git_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          permission: "read"
+        status_code: [200, 201, 204]
+      when: git_server_type == 'gitea' and access == 'read'
+      ignore_errors: yes
+
+    - name: Grant Gitea write access
+      uri:
+        url: "{{ git_api_url }}/repos/{{ git_repo }}/collaborators/{{ user }}"
+        method: PUT
+        headers:
+          Authorization: "token {{ git_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          permission: "write"
+        status_code: [200, 201, 204]
+      when: git_server_type == 'gitea' and access == 'write'
+      ignore_errors: yes
+
+    - name: Grant Gitea admin access
+      uri:
+        url: "{{ git_api_url }}/repos/{{ git_repo }}/collaborators/{{ user }}"
+        method: PUT
+        headers:
+          Authorization: "token {{ git_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          permission: "admin"
+        status_code: [200, 201, 204]
+      when: git_server_type == 'gitea' and access == 'execute'
+      ignore_errors: yes
+
+    # GitLab-specific permissions
+    - name: Grant GitLab read access (Reporter role)
+      uri:
+        url: "{{ git_api_url }}/projects/{{ git_repo | replace('/', '%2F') }}/members"
+        method: POST
+        headers:
+          PRIVATE-TOKEN: "{{ git_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          user_id: "{{ user }}"
+          access_level: 20  # Reporter
+        status_code: [200, 201]
+      when: git_server_type == 'gitlab' and access == 'read'
+      ignore_errors: yes
+
+    - name: Grant GitLab write access (Developer role)
+      uri:
+        url: "{{ git_api_url }}/projects/{{ git_repo | replace('/', '%2F') }}/members"
+        method: POST
+        headers:
+          PRIVATE-TOKEN: "{{ git_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          user_id: "{{ user }}"
+          access_level: 30  # Developer
+        status_code: [200, 201]
+      when: git_server_type == 'gitlab' and access == 'write'
+      ignore_errors: yes
+
+    - name: Grant GitLab admin access (Maintainer role)
+      uri:
+        url: "{{ git_api_url }}/projects/{{ git_repo | replace('/', '%2F') }}/members"
+        method: POST
+        headers:
+          PRIVATE-TOKEN: "{{ git_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          user_id: "{{ user }}"
+          access_level: 40  # Maintainer
+        status_code: [200, 201]
+      when: git_server_type == 'gitlab' and access == 'execute'
+      ignore_errors: yes
+
+    # GitHub Enterprise-specific permissions
+    - name: Grant GitHub read access
+      uri:
+        url: "{{ git_api_url }}/repos/{{ git_repo }}/collaborators/{{ user }}"
+        method: PUT
+        headers:
+          Authorization: "token {{ git_api_token }}"
+          Accept: "application/vnd.github.v3+json"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          permission: "pull"
+        status_code: [200, 201, 204]
+      when: git_server_type == 'github' and access == 'read'
+      ignore_errors: yes
+
+    - name: Grant GitHub write access
+      uri:
+        url: "{{ git_api_url }}/repos/{{ git_repo }}/collaborators/{{ user }}"
+        method: PUT
+        headers:
+          Authorization: "token {{ git_api_token }}"
+          Accept: "application/vnd.github.v3+json"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          permission: "push"
+        status_code: [200, 201, 204]
+      when: git_server_type == 'github' and access == 'write'
+      ignore_errors: yes
+
+    - name: Grant GitHub admin access
+      uri:
+        url: "{{ git_api_url }}/repos/{{ git_repo }}/collaborators/{{ user }}"
+        method: PUT
+        headers:
+          Authorization: "token {{ git_api_token }}"
+          Accept: "application/vnd.github.v3+json"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          permission: "admin"
+        status_code: [200, 201, 204]
+      when: git_server_type == 'github' and access == 'execute'
+      ignore_errors: yes
+
+    - name: Display result
+      debug:
+        msg: "✅ Successfully applied {{ access }} permissions for {{ user }} on {{ git_server_type }}"
+
+    - name: Log permission change
+      lineinfile:
+        path: /var/log/whooper-permissions.log
+        line: "{{ ansible_date_time.iso8601 }} - Git ({{ git_server_type }}): {{ user }} granted {{ access }} access to {{ git_repo }}"
+        create: yes
+      delegate_to: localhost
+      ignore_errors: yes

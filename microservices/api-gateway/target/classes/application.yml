@@ -1,0 +1,125 @@
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      routes:
+        # User Service Routes
+        - id: user-service
+          uri: ${USER_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - RewritePath=/api/user/(?<segment>.*), /api/user/$\{segment}
+
+        # Drive Service Routes
+        - id: drive-service
+          uri: ${DRIVE_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/drive/**
+          filters:
+            - RewritePath=/api/drive/(?<segment>.*), /api/drive/$\{segment}
+
+        # Mail Service Routes
+        - id: mail-service
+          uri: ${MAIL_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/mail/**
+          filters:
+            - RewritePath=/api/mail/(?<segment>.*), /api/mail/$\{segment}
+
+        # Chat Service Routes
+        - id: chat-service
+          uri: ${CHAT_SERVICE_URL:http://localhost:8085}
+          predicates:
+            - Path=/api/chat/**
+          filters:
+            - RewritePath=/api/chat/(?<segment>.*), /api/chat/$\{segment}
+
+        # Notify Service Routes
+        - id: notify-service
+          uri: ${NOTIFY_SERVICE_URL:http://localhost:8086}
+          predicates:
+            - Path=/api/notify/**
+          filters:
+            - RewritePath=/api/notify/(?<segment>.*), /api/notify/$\{segment}
+
+        # Excel Service Routes
+        - id: excel-service
+          uri: ${EXCEL_SERVICE_URL:http://localhost:8087}
+          predicates:
+            - Path=/api/excel/**
+          filters:
+            - RewritePath=/api/excel/(?<segment>.*), /api/excel/$\{segment}
+
+        # Slides Service Routes
+        - id: slides-service
+          uri: ${SLIDES_SERVICE_URL:http://localhost:8088}
+          predicates:
+            - Path=/api/slides/**
+          filters:
+            - RewritePath=/api/slides/(?<segment>.*), /api/slides/$\{segment}
+
+        # Health Check Route (Public)
+        - id: health
+          uri: ${USER_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/health
+          filters:
+            - RewritePath=/api/health, /actuator/health
+
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:3000"   # slides (dev)
+              - "http://localhost:3001"   # excel (dev)
+              - "http://localhost:3002"   # suite (dev)
+              - "http://localhost:3003"   # chat (dev)
+              - "http://localhost:3004"   # mail (dev)
+              - "http://localhost:3005"   # auth (dev)
+              - "http://localhost:3006"   # drive (dev)
+              - "http://localhost:3007"   # notify (dev)
+              - "http://darevel.local"    # suite (domain)
+              - "http://auth.darevel.local"     # auth (domain)
+              - "http://chat.darevel.local"     # chat (domain)
+              - "http://mail.darevel.local"     # mail (domain)
+              - "http://drive.darevel.local"    # drive (domain)
+              - "http://excel.darevel.local"    # excel (domain)
+              - "http://slides.darevel.local"   # slides (domain)
+              - "http://notify.darevel.local"   # notify (domain)
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+              - PATCH
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER:http://localhost:8080/realms/pilot180}
+          jwk-set-uri: ${KEYCLOAK_JWKS_URI:http://localhost:8080/realms/pilot180/protocol/openid-connect/certs}
+
+server:
+  port: ${SERVER_PORT:8081}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway,routes
+  endpoint:
+    gateway:
+      enabled: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG

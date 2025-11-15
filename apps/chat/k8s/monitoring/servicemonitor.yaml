@@ -1,0 +1,23 @@
+# ServiceMonitor for Whooper Backend
+# Tells Prometheus to scrape metrics from Whooper backend pods
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: whooper-backend-monitor
+  namespace: whooper
+  labels:
+    app: whooper
+    component: backend
+    release: prometheus  # Must match your Prometheus operator's release label
+spec:
+  selector:
+    matchLabels:
+      app: whooper
+      component: backend
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+      scheme: http

@@ -1,0 +1,69 @@
+# RBAC Configuration for Whooper Auto-Healing
+# Grants the backend permission to watch pod events for auto-healing
+
+---
+# ServiceAccount for Whooper backend (if not already created)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: whooper-backend
+  namespace: whooper
+  labels:
+    app: whooper
+    component: backend
+
+---
+# ClusterRole with permissions to watch pods across all namespaces
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: whooper-pod-watcher
+  labels:
+    app: whooper
+rules:
+  # Watch and read pods across all namespaces
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+
+  # Read pod logs for debugging
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+
+  # Read events for incident context
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch"]
+
+  # Read namespaces
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list"]
+
+  # Read deployments, replicasets, statefulsets for context
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+    verbs: ["get", "list"]
+
+  # Read jobs and cronjobs
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list"]
+
+---
+# ClusterRoleBinding to grant permissions to whooper-backend ServiceAccount
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: whooper-pod-watcher-binding
+  labels:
+    app: whooper
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: whooper-pod-watcher
+subjects:
+  - kind: ServiceAccount
+    name: whooper-backend
+    namespace: whooper
