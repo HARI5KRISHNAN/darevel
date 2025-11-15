@@ -1,90 +1,42 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>Darevel Local Status</title>
+  <meta charset="UTF-8" />
+  <title>Darevel App Status</title>
   <style>
-    body{font-family: Inter,system-ui,Arial;margin:24px;background:#f7fafc;color:#0f172a}
-    h1{font-size:20px;margin-bottom:8px}
-    table{border-collapse:collapse;width:100%;max-width:900px}
-    th,td{padding:10px;border-radius:6px;text-align:left}
-    th{background:#0f172a;color:#fff}
-    tr{background:#fff}
-    .ok{color:green;font-weight:700}
-    .bad{color:#b91c1c;font-weight:700}
-    .unknown{color:#f59e0b;font-weight:700}
-    code{background:#eef2ff;padding:2px 6px;border-radius:4px}
-    .small{font-size:12px;color:#64748b}
+    body { font-family: Inter, sans-serif; background: #0b132b; color: white; text-align: center; padding: 40px; }
+    h1 { color: #5bc0be; }
+    .app { margin: 15px auto; padding: 10px 20px; border-radius: 10px; width: 320px; background: #1c2541; }
+    .ok { background: #0b3c5d; color: #5bc0be; }
+    .down { background: #3b0a0a; color: #ff4d4d; }
   </style>
+  <script>
+    const apps = [
+      { name: "Auth Service", url: "http://auth.darevel.local" },
+      { name: "Suite Dashboard", url: "http://suite.darevel.local" },
+      { name: "Keycloak SSO", url: "http://keycloak.darevel.local" }
+    ];
+    async function check() {
+      for (const app of apps) {
+        const div = document.createElement('div');
+        div.className = 'app';
+        div.innerText = `⏳ Checking ${app.name}...`;
+        document.body.appendChild(div);
+        try {
+          const res = await fetch(app.url, { mode: 'no-cors' });
+          div.className = 'app ok';
+          div.innerText = `✅ ${app.name} is reachable`;
+        } catch {
+          div.className = 'app down';
+          div.innerText = `❌ ${app.name} not reachable`;
+        }
+      }
+    }
+    window.onload = check;
+  </script>
 </head>
 <body>
-  <h1>Darevel — Local Apps Status</h1>
-  <p class="small">Opens browser-level CORS checks may block direct fetches for some hosts — whitelist if needed.</p>
-  <table id="status-table" aria-live="polite">
-    <thead>
-      <tr><th>App</th><th>URL</th><th>HTTP</th><th>Notes</th></tr>
-    </thead>
-    <tbody>
-      <!-- Edit this list to match your apps -->
-      <tr><td>Suite</td><td><code>http://suite.darevel.local/</code></td><td class="status">…</td><td class="note">Next.js (3002)</td></tr>
-      <tr><td>Auth</td><td><code>http://auth.darevel.local/</code></td><td class="status">…</td><td class="note">Next-auth + Keycloak (3005)</td></tr>
-      <tr><td>Slides</td><td><code>http://slides.darevel.local/</code></td><td class="status">…</td><td class="note">Next.js (3000)</td></tr>
-      <tr><td>Excel</td><td><code>http://excel.darevel.local/</code></td><td class="status">…</td><td class="note">Vite (3004)</td></tr>
-      <tr><td>Chat</td><td><code>http://chat.darevel.local/</code></td><td class="status">…</td><td class="note">Vite (3003)</td></tr>
-      <tr><td>Drive</td><td><code>http://drive.darevel.local/</code></td><td class="status">…</td><td class="note">Next.js (3006)</td></tr>
-      <tr><td>Mail</td><td><code>http://mail.darevel.local/</code></td><td class="status">…</td><td class="note">Vite (3008)</td></tr>
-      <tr><td>Notify</td><td><code>http://notify.darevel.local/</code></td><td class="status">…</td><td class="note">Next.js (3007)</td></tr>
-      <tr><td>Keycloak</td><td><code>http://keycloak.darevel.local:8080/</code></td><td class="status">…</td><td class="note">Keycloak Admin</td></tr>
-      <tr><td>API Gateway</td><td><code>http://api.darevel.local:8081/</code></td><td class="status">…</td><td class="note">Spring Boot (8081)</td></tr>
-    </tbody>
-  </table>
-
-  <script>
-    const rows = Array.from(document.querySelectorAll("tbody tr"));
-    async function checkRow(tr) {
-      const url = tr.querySelector("td code").innerText;
-      const statusCell = tr.querySelector(".status");
-      const noteCell = tr.querySelector(".note");
-      statusCell.textContent = "checking...";
-      try {
-        // Attempt a simple GET; some hosts may block CORS — handle with fetch timeout
-        const controller = new AbortController();
-        const id = setTimeout(()=>controller.abort(), 4000);
-        const res = await fetch(url, { method: "GET", mode: "no-cors", signal: controller.signal }).catch(e => { throw e; });
-        clearTimeout(id);
-        // with no-cors mode we can't inspect res.status; assume success if no exception
-        statusCell.textContent = "reachable";
-        statusCell.className = "status ok";
-        noteCell.textContent = noteCell.textContent + " — fetched (no-cors)";
-      } catch (err) {
-        // Try to probe via an image to bypass CORS; create an img and wait for load/error
-        await new Promise((resolve) => {
-          const img = new Image();
-          let timer = setTimeout(()=>{ img.src = ""; resolve("timeout"); }, 3500);
-          img.onload = () => { clearTimeout(timer); resolve("ok"); };
-          img.onerror = () => { clearTimeout(timer); resolve("error"); };
-          // attempt root or favicon
-          img.src = url.replace(/\/+$/, "") + "/favicon.ico?probe=" + Date.now();
-        }).then((r) => {
-          if (r === "ok") {
-            statusCell.textContent = "reachable (image)";
-            statusCell.className = "status ok";
-          } else {
-            statusCell.textContent = "unreachable";
-            statusCell.className = "status bad";
-          }
-        });
-      }
-    }
-
-    async function runAll() {
-      for (const r of rows) {
-        await checkRow(r);
-      }
-    }
-    runAll();
-    // refresh statuses every 10s
-    setInterval(runAll, 10000);
-  </script>
+  <h1>Darevel App Health Dashboard</h1>
+  <p>Checking local apps...</p>
 </body>
 </html>

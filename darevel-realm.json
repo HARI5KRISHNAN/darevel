@@ -1,24 +1,97 @@
 {
   "realm": "darevel",
   "enabled": true,
-  "users": [
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+
+  "clients": [
     {
-      "username": "demo@darevel.com",
+      "clientId": "darevel-client",
+      "name": "Darevel Unified Client",
+      "rootUrl": "",
+      "adminUrl": "",
+      "baseUrl": "/",
+
       "enabled": true,
-      "email": "demo@darevel.com",
-      "firstName": "Demo",
-      "lastName": "User",
-      "credentials": [{ "type": "password", "value": "demo123", "temporary": false }]
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://suite.darevel.local/*",
+        "http://auth.darevel.local/*",
+        "http://chat.darevel.local/*",
+        "http://excel.darevel.local/*",
+        "http://drive.darevel.local/*",
+        "http://notify.darevel.local/*",
+        "http://mail.darevel.local/*",
+        "http://slides.darevel.local/*",
+        "http://status.darevel.local/*",
+        "http://keycloak.darevel.local/*",
+
+        "http://localhost:*/*",
+        "http://127.0.0.1:*/*",
+        "http://0.0.0.0:*/*",
+        "http://192.168.56.1:*/*",
+        "http://192.168.112.1:*/*",
+        "http://192.168.29.101:*/*",
+        "http://host.docker.internal:*/*",
+        "http://keycloak.darevel.local/*"
+      ],
+      "webOrigins": [
+        "http://suite.darevel.local",
+        "http://auth.darevel.local",
+        "http://chat.darevel.local",
+        "http://excel.darevel.local",
+        "http://drive.darevel.local",
+        "http://notify.darevel.local",
+        "http://mail.darevel.local",
+        "http://slides.darevel.local",
+        "http://status.darevel.local",
+        "http://keycloak.darevel.local",
+
+        "http://localhost:*",
+        "http://127.0.0.1:*",
+        "http://0.0.0.0:*",
+        "http://192.168.29.101:*",
+        "http://host.docker.internal:*"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "*",
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocol": "openid-connect"
     }
   ],
-  "clients": [
-    { "clientId": "darevel-auth", "rootUrl": "http://auth.darevel.local", "redirectUris": ["*"], "publicClient": true, "protocol": "openid-connect" },
-    { "clientId": "darevel-suite", "rootUrl": "http://suite.darevel.local", "redirectUris": ["*"], "publicClient": true, "protocol": "openid-connect" },
-    { "clientId": "darevel-drive", "rootUrl": "http://drive.darevel.local", "redirectUris": ["*"], "publicClient": true, "protocol": "openid-connect" },
-    { "clientId": "darevel-chat", "rootUrl": "http://chat.darevel.local", "redirectUris": ["*"], "publicClient": true, "protocol": "openid-connect" },
-    { "clientId": "darevel-excel", "rootUrl": "http://excel.darevel.local", "redirectUris": ["*"], "publicClient": true, "protocol": "openid-connect" },
-    { "clientId": "darevel-mail", "rootUrl": "http://mail.darevel.local", "redirectUris": ["*"], "publicClient": true, "protocol": "openid-connect" },
-    { "clientId": "darevel-slides", "rootUrl": "http://slides.darevel.local", "redirectUris": ["*"], "publicClient": true, "protocol": "openid-connect" },
-    { "clientId": "darevel-notify", "rootUrl": "http://notify.darevel.local", "redirectUris": ["*"], "publicClient": true, "protocol": "openid-connect" }
+
+  "roles": {
+    "realm": [
+      { "name": "user" },
+      { "name": "admin" }
+    ]
+  },
+
+  "groups": [],
+  
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Darevel",
+      "lastName": "Admin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "admin"
+      ]
+    }
   ]
 }

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -6,50 +5,40 @@ import keycloak from './src/keycloak';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
+  throw new Error("Root element not found");
 }
 
-// Initialize Keycloak before mounting the app
 keycloak.init({
-  onLoad: "login-required", // Require login for SSO
-  checkLoginIframe: false, // Disable iframe for better compatibility
-  pkceMethod: 'S256',
-  redirectUri: window.location.origin + '/'
-}).then((authenticated) => {
-  if (authenticated) {
-    console.log("Authenticated as:", keycloak.tokenParsed?.preferred_username);
-    console.log("User email:", keycloak.tokenParsed?.email);
-
-    // Store token for API calls
-    localStorage.setItem('kc_token', keycloak.token || '');
-    localStorage.setItem('kc_refreshToken', keycloak.refreshToken || '');
-
-    // Setup token refresh - refresh token every 60 seconds if needed
-    setInterval(() => {
-      keycloak.updateToken(70).then((refreshed) => {
-        if (refreshed) {
-          console.log('Token refreshed');
-          localStorage.setItem('kc_token', keycloak.token || '');
-        }
-      }).catch(() => {
-        console.error('Failed to refresh token');
-        keycloak.login();
-      });
-    }, 60000);
-
-    // Mount app after successful authentication
-    const root = ReactDOM.createRoot(rootElement);
-    root.render(
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>
-    );
-  } else {
-    console.log("Not authenticated - redirecting to login");
+  onLoad: "login-required",
+  checkLoginIframe: false,
+  pkceMethod: false,   // PKCE DISABLED
+  redirectUri: "http://chat.darevel.local:3003/"
+})
+.then((authenticated) => {
+  if (!authenticated) {
     keycloak.login();
+    return;
   }
-}).catch((err) => {
-  console.error("Keycloak init failed", err);
-  // On failure, try to login
+
+  console.log("Logged in:", keycloak.tokenParsed?.preferred_username);
+
+  localStorage.setItem("kc_token", keycloak.token || "");
+  localStorage.setItem("kc_refreshToken", keycloak.refreshToken || "");
+
+  setInterval(() => {
+    keycloak.updateToken(70).then((refreshed) => {
+      if (refreshed) {
+        localStorage.setItem("kc_token", keycloak.token || "");
+      }
+    }).catch(() => {
+      keycloak.login();
+    });
+  }, 60000);
+
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(<App />);
+})
+.catch((err) => {
+  console.error("Keycloak initialization failed", err);
   keycloak.login();
 });

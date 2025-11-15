@@ -1,9 +1,9 @@
-import Keycloak from 'keycloak-js';
+import Keycloak from "keycloak-js";
 
 const keycloak = new Keycloak({
-  url: 'http://localhost:8080',
-  realm: 'pilot180',
-  clientId: 'darevel-chat'
+  url: "https://keycloak.darevel.local",
+  realm: "master",
+  clientId: "chat-web"
 });
 
 export default keycloak;
