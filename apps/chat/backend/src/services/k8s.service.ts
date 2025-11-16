@@ -162,9 +162,18 @@ export async function startWatchingPods(io: Server): Promise<void> {
     );
 
     console.log('✓ Kubernetes watch established');
-  } catch (error) {
-    console.error('Failed to start watching pods:', error);
-    throw error;
+  } catch (error: any) {
+    // Check if this is a K8s unavailable error
+    if (error.code === 'ENOENT' || error.message?.includes('ENOENT') || error.message?.includes('serviceaccount')) {
+      console.log('⚠️  Kubernetes not available - pod watching disabled');
+      console.log('💡 Server will continue without Kubernetes integration');
+      return; // Don't throw, just return gracefully
+    }
+
+    console.error('Failed to start watching pods:', error.message);
+    console.log('Kubernetes watcher not available:', error.message);
+    console.log('Server will continue without Kubernetes integration...');
+    // Don't throw - allow server to continue
   }
 }
 
