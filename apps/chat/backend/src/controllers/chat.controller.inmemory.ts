@@ -10,10 +10,17 @@ import type { Role, BroadcastMessage } from '../types';
 // In-memory message store: channelId -> messages[]
 const messageStore: Map<string, any[]> = new Map();
 
-// In-memory user store - starts empty, users are created on first message
-const users: Map<number, any> = new Map();
-
 let messageIdCounter = 1;
+
+/**
+ * Clear all messages (for testing)
+ */
+export const clearAllMessages = async (req, res) => {
+  messageStore.clear();
+  messageIdCounter = 1;
+  console.log('🗑️  All messages cleared');
+  res.status(200).json({ message: 'All messages cleared' });
+};
 
 /**
  * Get messages for a channel
@@ -49,7 +56,7 @@ export const getMessages = async (req, res) => {
  */
 export const sendMessage = async (req, res) => {
   const { channelId } = req.params;
-  const { content, userId } = req.body;
+  const { content, userId, userName, userEmail, userAvatar } = req.body;
 
   if (!content) {
     return res.status(400).json({ message: 'Message content cannot be empty.' });
@@ -59,17 +66,13 @@ export const sendMessage = async (req, res) => {
   }
 
   try {
-    // Get or create user
-    let user = users.get(userId);
-    if (!user) {
-      user = {
-        id: userId,
-        name: `User ${userId}`,
-        email: `user${userId}@whooper.com`,
-        avatar: `https://i.pravatar.cc/40?u=user${userId}@whooper.com`
-      };
-      users.set(userId, user);
-    }
+    // Use user data from request (sent from frontend after login/registration)
+    const user = {
+      id: userId,
+      name: userName || `User ${userId}`,
+      email: userEmail || `user${userId}@whooper.com`,
+      avatar: userAvatar || `https://i.pravatar.cc/80?u=user${userId}@whooper.com`
+    };
 
     // Create new message
     const newMessage: BroadcastMessage = {

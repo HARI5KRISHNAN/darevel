@@ -15,6 +15,7 @@ import VideoCallView from './components/VideoCallView';
 import NewProjectModal from './components/NewProjectModal';
 import { useRealTimeK8s } from './hooks/useRealTimeK8s';
 import IncidentDashboard from './components/IncidentDashboard';
+import AuthPage from './components/AuthPage';
 
 type Theme = 'light' | 'dark';
 
@@ -32,13 +33,7 @@ const App: React.FC = () => {
     } catch (e) {
         console.error("Failed to parse user from localStorage", e);
     }
-    return {
-      id: 1,
-      name: 'Esther Howard',
-      email: 'esther@example.com',
-      avatar: 'https://i.pravatar.cc/80?u=esther',
-      level: 'Elementary',
-    };
+    return null; // No default user - require login
   });
 
   const [activeView, setActiveView] = useState<View>('home');
@@ -159,6 +154,20 @@ const App: React.FC = () => {
     setActiveView('status');
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('whooper_user');
+    setUser(null);
+  };
+
+  const handleLogin = (loggedInUser: User) => {
+    setUser(loggedInUser);
+  };
+
+  // Show auth page if no user is logged in
+  if (!user) {
+    return <AuthPage onLogin={handleLogin} />;
+  }
+
   const renderView = () => {
     if (activeView === 'home' && selectedProjectId) {
         const selectedProject = projects.find(p => p.id === selectedProjectId);
@@ -193,9 +202,9 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full bg-background-main font-sans text-sm overflow-hidden">
-      <NavigationSidebar 
+      <NavigationSidebar
         user={user}
-        activeView={activeView} 
+        activeView={activeView}
         onNavigate={(view) => {
             setSelectedProjectId(null); // Deselect project when navigating away
             setActiveView(view);
@@ -206,6 +215,7 @@ const App: React.FC = () => {
         onToggleTheme={handleToggleTheme}
         userSearchQuery={userSearchQuery}
         onUserSearchChange={handleUserSearchChange}
+        onLogout={handleLogout}
       />
       <div className="flex-1 flex flex-col min-w-0">
         <main className="flex-1 flex min-w-0 overflow-y-auto no-scrollbar">

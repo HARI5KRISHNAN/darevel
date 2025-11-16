@@ -42,9 +42,10 @@ interface NavigationSidebarProps {
     onToggleTheme: () => void;
     userSearchQuery: string;
     onUserSearchChange: (query: string) => void;
+    onLogout?: () => void;
 }
 
-const NavigationSidebar: React.FC<NavigationSidebarProps> = ({ user, activeView, onNavigate, isCollapsed, onToggleCollapse, theme, onToggleTheme, userSearchQuery, onUserSearchChange }) => {
+const NavigationSidebar: React.FC<NavigationSidebarProps> = ({ user, activeView, onNavigate, isCollapsed, onToggleCollapse, theme, onToggleTheme, userSearchQuery, onUserSearchChange, onLogout }) => {
   return (
     <nav className={`bg-background-main p-4 flex flex-col gap-4 border-r border-border-color transition-all duration-300 ease-in-out relative ${isCollapsed ? 'w-20' : 'w-72'}`}>
         
@@ -117,6 +118,17 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({ user, activeView,
                             <p className="font-semibold text-sm text-text-primary truncate">{user.name}</p>
                             <p className="text-xs text-text-secondary truncate">{user.email}</p>
                         </div>
+                    )}
+                    {onLogout && (
+                        <button
+                            onClick={onLogout}
+                            className="p-2 rounded-md hover:bg-background-panel text-text-secondary hover:text-red-400 transition-colors"
+                            title="Logout"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                        </button>
                     )}
                 </div>
             </div>
