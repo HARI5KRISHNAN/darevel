@@ -23,6 +23,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
     const [availableUsers, setAvailableUsers] = useState<User[]>([]);
     const [showUserList, setShowUserList] = useState(false);
+    const [socket, setSocket] = useState<Socket | null>(null);
 
     // Fetch all registered users on mount
     useEffect(() => {
@@ -32,13 +33,13 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
     // Setup Socket.IO connection for real-time messaging
     useEffect(() => {
         const SOCKET_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-        const socket: Socket = io(SOCKET_URL);
+        const socketInstance: Socket = io(SOCKET_URL);
 
-        socket.on('connect', () => {
+        socketInstance.on('connect', () => {
             console.log('✓ Connected to chat backend');
         });
 
-        socket.on('new_message', (message: Message) => {
+        socketInstance.on('new_message', (message: Message) => {
             console.log('📩 Received new message:', message);
             // Add message to the appropriate conversation
             setConversations(prev => prev.map(convo => {
@@ -58,14 +59,33 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
             }));
         });
 
-        socket.on('disconnect', () => {
+        socketInstance.on('disconnect', () => {
             console.log('✗ Disconnected from chat backend');
         });
 
+        setSocket(socketInstance);
+
         return () => {
-            socket.disconnect();
+            socketInstance.disconnect();
         };
     }, []);
+
+    // Join/leave channels when conversation changes
+    useEffect(() => {
+        if (!socket) return;
+
+        // Leave previous channel
+        const previousChannel = conversations.find(c => c.id !== selectedConversationId);
+        if (previousChannel) {
+            socket.emit('leave_channel', previousChannel.id);
+        }
+
+        // Join new channel
+        if (selectedConversationId) {
+            socket.emit('join_channel', selectedConversationId);
+            console.log(`Joined channel: ${selectedConversationId}`);
+        }
+    }, [selectedConversationId, socket]);
 
     const fetchRegisteredUsers = async () => {
         try {

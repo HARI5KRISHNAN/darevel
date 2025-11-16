@@ -123,6 +123,18 @@ io.on('connection', (socket) => {
   // Send initial pod list to new clients
   socket.emit('initial_pods', getPods());
 
+  // Handle joining chat channels/rooms
+  socket.on('join_channel', (channelId: string) => {
+    socket.join(channelId);
+    console.log(`Socket ${socket.id} joined channel: ${channelId}`);
+  });
+
+  // Handle leaving chat channels/rooms
+  socket.on('leave_channel', (channelId: string) => {
+    socket.leave(channelId);
+    console.log(`Socket ${socket.id} left channel: ${channelId}`);
+  });
+
   // Handle disconnect
   socket.on('disconnect', () => {
     console.log(`Client disconnected: ${socket.id}`);
