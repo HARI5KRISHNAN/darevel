@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import MeetingSchedulerV2 from './MeetingSchedulerV2';
 import MessageSummaryGenerator from './MessageSummaryGenerator';
 import PodAlertsPanel from './PodAlertsPanel';
+import { DoubleArrowLeftIcon, DoubleArrowRightIcon } from './icons';
 
 
 const RightSidebar: React.FC = () => {
     const [isMeetingSchedulerOpen, setIsMeetingSchedulerOpen] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(false);
 
     // Sample messages for the summary generator
     const sampleMessages = [
@@ -18,37 +20,72 @@ const RightSidebar: React.FC = () => {
 
     return (
         <>
-            <aside className="w-72 bg-background-panel p-4 flex-col gap-6 border-l border-border-color hidden lg:flex">
-                {/* Meeting Scheduler Section */}
-                <div className="space-y-4">
-                     <h2 className="text-xs font-bold text-text-secondary uppercase tracking-wider">Quick Actions</h2>
-                     <button
-                        onClick={() => setIsMeetingSchedulerOpen(true)}
-                        className="w-full flex items-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg"
-                        title="Schedule a new meeting"
+            <aside className={`bg-background-panel p-4 flex-col gap-6 border-l border-border-color hidden lg:flex transition-all duration-300 ease-in-out ${isCollapsed ? 'w-20' : 'w-72'}`}>
+                {/* Collapse/Expand Button */}
+                <div className="flex justify-between items-center">
+                    {!isCollapsed && <h2 className="text-xs font-bold text-text-secondary uppercase tracking-wider">Quick Actions</h2>}
+                    <button
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                        className="text-text-secondary hover:text-text-primary p-1 ml-auto shrink-0"
+                        aria-label={isCollapsed ? 'Expand quick actions' : 'Collapse quick actions'}
+                        title={isCollapsed ? 'Expand' : 'Collapse'}
                     >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                            />
-                        </svg>
-                        <span>Schedule Meeting</span>
+                        {isCollapsed ? <DoubleArrowLeftIcon className="w-5 h-5" /> : <DoubleArrowRightIcon className="w-5 h-5" />}
                     </button>
                 </div>
 
-                {/* Pod Status & Message Summary Section */}
+                {/* Meeting Scheduler Section */}
                 <div className="space-y-4">
-                    <h2 className="text-xs font-bold text-text-secondary uppercase tracking-wider">Pod Status & AI Summary</h2>
-                    <MessageSummaryGenerator messages={sampleMessages} />
+                     {isCollapsed ? (
+                        // Collapsed view - icon only
+                        <button
+                            onClick={() => setIsMeetingSchedulerOpen(true)}
+                            className="w-full flex justify-center p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg"
+                            title="Schedule a new meeting"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                />
+                            </svg>
+                        </button>
+                     ) : (
+                        // Expanded view - full button
+                        <button
+                            onClick={() => setIsMeetingSchedulerOpen(true)}
+                            className="w-full flex items-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg"
+                            title="Schedule a new meeting"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                />
+                            </svg>
+                            <span>Schedule Meeting</span>
+                        </button>
+                     )}
                 </div>
 
+                {/* Pod Status & Message Summary Section */}
+                {!isCollapsed && (
+                    <div className="space-y-4">
+                        <h2 className="text-xs font-bold text-text-secondary uppercase tracking-wider">Pod Status & AI Summary</h2>
+                        <MessageSummaryGenerator messages={sampleMessages} />
+                    </div>
+                )}
+
                 {/* Pod Alerts Section */}
-                <div className="space-y-4">
-                    <PodAlertsPanel />
-                </div>
+                {!isCollapsed && (
+                    <div className="space-y-4">
+                        <PodAlertsPanel />
+                    </div>
+                )}
         </aside>
 
         {/* Meeting Scheduler Modal */}
