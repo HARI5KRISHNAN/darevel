@@ -8,8 +8,8 @@ const ensureUserExists = async (userId: number) => {
         // If the user doesn't exist, create it. This is for the default demo user.
         if (userId === 1) {
             await db.query(
-                `INSERT INTO users (id, name, email, password_hash, avatar) 
-                 VALUES (1, 'Demo User', 'demo@whooper.com', 'none', 'https://i.pravatar.cc/40?u=demo@whooper.com') 
+                `INSERT INTO users (id, name, email, password_hash, avatar)
+                 VALUES (1, 'Demo User', 'demo@darevel.chat', 'none', 'https://i.pravatar.cc/40?u=demo@darevel.chat')
                  ON CONFLICT (id) DO NOTHING`
             );
         }

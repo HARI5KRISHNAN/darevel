@@ -14,9 +14,9 @@ const testConnection = async (): Promise<boolean> => {
   const dbConfig = {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '5432'),
-    user: process.env.POSTGRES_USER || 'whooper',
-    password: process.env.POSTGRES_PASSWORD || 'whooper123',
-    database: process.env.POSTGRES_DB || 'whooper',
+    user: process.env.POSTGRES_USER || 'darevel_chat',
+    password: process.env.POSTGRES_PASSWORD || 'darevel_chat123',
+    database: process.env.POSTGRES_DB || 'darevel_chat',
   };
 
   const pool = new Pool(dbConfig);

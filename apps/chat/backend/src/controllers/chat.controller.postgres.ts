@@ -82,7 +82,7 @@ export const sendMessage = async (req, res) => {
     const user = userResult.rows[0] || {
       id: userId,
       name: userName || `User ${userId}`,
-      email: userEmail || `user${userId}@whooper.com`,
+      email: userEmail || `user${userId}@darevel.chat`,
       avatar: userAvatar || `https://i.pravatar.cc/80?u=user${userId}`
     };
 

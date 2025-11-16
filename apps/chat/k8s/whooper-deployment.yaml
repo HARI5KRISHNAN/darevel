@@ -1,14 +1,14 @@
-# Complete Kubernetes Deployment for Whooper Dashboard
+# Complete Kubernetes Deployment for Darevel Chat Dashboard
 # Includes: Frontend, Backend, RBAC, ConfigMaps, Secrets, Services, Ingress
 
 ---
-# Namespace for Whooper application
+# Namespace for Darevel Chat application
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: whooper
+  name: darevel-chat
   labels:
-    name: whooper
+    name: darevel-chat
     app: kubernetes-dashboard
 
 ---
@@ -16,15 +16,15 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: whooper-backend
-  namespace: whooper
+  name: darevel-chat-backend
+  namespace: darevel-chat
 
 ---
 # ClusterRole with pod read permissions
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: whooper-pod-reader
+  name: darevel-chat-pod-reader
 rules:
   - apiGroups: [""]
     resources: ["pods", "namespaces", "events"]
@@ -41,23 +41,23 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: whooper-pod-reader-binding
+  name: darevel-chat-pod-reader-binding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: whooper-pod-reader
+  name: darevel-chat-pod-reader
 subjects:
   - kind: ServiceAccount
-    name: whooper-backend
-    namespace: whooper
+    name: darevel-chat-backend
+    namespace: darevel-chat
 
 ---
 # ConfigMap for backend configuration
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: whooper-backend-config
-  namespace: whooper
+  name: darevel-chat-backend-config
+  namespace: darevel-chat
 data:
   NODE_ENV: "production"
   PORT: "5001"
@@ -70,8 +70,8 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: whooper-backend-secrets
-  namespace: whooper
+  name: darevel-chat-backend-secrets
+  namespace: darevel-chat
 type: Opaque
 data:
   # Replace with: echo -n "your-gemini-api-key" | base64
@@ -86,10 +86,10 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: whooper-backend
-  namespace: whooper
+  name: darevel-chat-backend
+  namespace: darevel-chat
   labels:
-    app: whooper
+    app: darevel-chat
     component: backend
 spec:
   replicas: 2
@@ -100,18 +100,18 @@ spec:
       maxUnavailable: 0
   selector:
     matchLabels:
-      app: whooper
+      app: darevel-chat
       component: backend
   template:
     metadata:
       labels:
-        app: whooper
+        app: darevel-chat
         component: backend
     spec:
-      serviceAccountName: whooper-backend
+      serviceAccountName: darevel-chat-backend
       containers:
         - name: backend
-          image: your-registry.io/whooper-backend:latest  # Replace with your image
+          image: your-registry.io/darevel-chat-backend:latest  # Replace with your image
           imagePullPolicy: Always
           ports:
             - containerPort: 5001
@@ -121,34 +121,34 @@ spec:
             - name: NODE_ENV
               valueFrom:
                 configMapKeyRef:
-                  name: whooper-backend-config
+                  name: darevel-chat-backend-config
                   key: NODE_ENV
             - name: PORT
               valueFrom:
                 configMapKeyRef:
-                  name: whooper-backend-config
+                  name: darevel-chat-backend-config
                   key: PORT
             - name: K8S_NAMESPACE
               valueFrom:
                 configMapKeyRef:
-                  name: whooper-backend-config
+                  name: darevel-chat-backend-config
                   key: K8S_NAMESPACE
             - name: GEMINI_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: whooper-backend-secrets
+                  name: darevel-chat-backend-secrets
                   key: GEMINI_API_KEY
                   optional: true
             - name: EMAIL_APP_URL
               valueFrom:
                 secretKeyRef:
-                  name: whooper-backend-secrets
+                  name: darevel-chat-backend-secrets
                   key: EMAIL_APP_URL
                   optional: true
             - name: DEFAULT_EMAIL_RECIPIENT
               valueFrom:
                 secretKeyRef:
-                  name: whooper-backend-secrets
+                  name: darevel-chat-backend-secrets
                   key: DEFAULT_EMAIL_RECIPIENT
                   optional: true
           resources:
@@ -180,15 +180,15 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: whooper-backend
-  namespace: whooper
+  name: darevel-chat-backend
+  namespace: darevel-chat
   labels:
-    app: whooper
+    app: darevel-chat
     component: backend
 spec:
   type: ClusterIP
   selector:
-    app: whooper
+    app: darevel-chat
     component: backend
   ports:
     - port: 5001
@@ -201,10 +201,10 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: whooper-frontend
-  namespace: whooper
+  name: darevel-chat-frontend
+  namespace: darevel-chat
   labels:
-    app: whooper
+    app: darevel-chat
     component: frontend
 spec:
   replicas: 2
@@ -215,17 +215,17 @@ spec:
       maxUnavailable: 0
   selector:
     matchLabels:
-      app: whooper
+      app: darevel-chat
       component: frontend
   template:
     metadata:
       labels:
-        app: whooper
+        app: darevel-chat
         component: frontend
     spec:
       containers:
         - name: frontend
-          image: your-registry.io/whooper-frontend:latest  # Replace with your image
+          image: your-registry.io/darevel-chat-frontend:latest  # Replace with your image
           imagePullPolicy: Always
           ports:
             - containerPort: 80
@@ -233,7 +233,7 @@ spec:
               protocol: TCP
           env:
             - name: VITE_BACKEND_URL
-              value: "http://whooper-backend:5001"
+              value: "http://darevel-chat-backend:5001"
           resources:
             requests:
               memory: "128Mi"
@@ -263,15 +263,15 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: whooper-frontend
-  namespace: whooper
+  name: darevel-chat-frontend
+  namespace: darevel-chat
   labels:
-    app: whooper
+    app: darevel-chat
     component: frontend
 spec:
   type: ClusterIP
   selector:
-    app: whooper
+    app: darevel-chat
     component: frontend
   ports:
     - port: 80
@@ -285,8 +285,8 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: whooper-ingress
-  namespace: whooper
+  name: darevel-chat-ingress
+  namespace: darevel-chat
   annotations:
     kubernetes.io/ingress.class: "nginx"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
@@ -295,46 +295,46 @@ metadata:
 spec:
   rules:
     # Frontend
-    - host: whooper.yourdomain.com  # Replace with your domain
+    - host: darevel-chat.yourdomain.com  # Replace with your domain
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: whooper-frontend
+                name: darevel-chat-frontend
                 port:
                   number: 80
     # Backend API
-    - host: whooper-api.yourdomain.com  # Replace with your API domain
+    - host: darevel-chat-api.yourdomain.com  # Replace with your API domain
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: whooper-backend
+                name: darevel-chat-backend
                 port:
                   number: 5001
   # Uncomment for HTTPS with cert-manager
   # tls:
   #   - hosts:
-  #       - whooper.yourdomain.com
-  #       - whooper-api.yourdomain.com
-  #     secretName: whooper-tls
+  #       - darevel-chat.yourdomain.com
+  #       - darevel-chat-api.yourdomain.com
+  #     secretName: darevel-chat-tls
 
 ---
 # HorizontalPodAutoscaler for backend
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: whooper-backend-hpa
-  namespace: whooper
+  name: darevel-chat-backend-hpa
+  namespace: darevel-chat
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: whooper-backend
+    name: darevel-chat-backend
   minReplicas: 2
   maxReplicas: 10
   metrics:
@@ -356,13 +356,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: whooper-frontend-hpa
-  namespace: whooper
+  name: darevel-chat-frontend-hpa
+  namespace: darevel-chat
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: whooper-frontend
+    name: darevel-chat-frontend
   minReplicas: 2
   maxReplicas: 5
   metrics:

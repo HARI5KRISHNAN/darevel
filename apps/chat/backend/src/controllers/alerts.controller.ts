@@ -350,7 +350,7 @@ function buildAlertEmailHTML(alert: PrometheusAlert, status: string): string {
           <tr>
             <td style="padding: 20px; text-align: center; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
               <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 12px;">
-                This alert was sent by Whooper Kubernetes Monitoring
+                This alert was sent by Darevel Chat Kubernetes Monitoring
               </p>
               ${alert.generatorURL ? `
               <p style="margin: 0;">

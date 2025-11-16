@@ -68,7 +68,7 @@ export const updatePermission = async (req: Request, res: Response): Promise<voi
       access,
       executor = 'system',
       namespace = 'default',
-      gitRepo = 'whooper/main-repo',
+      gitRepo = 'darevel/main-repo',
       gitServerType = 'gitea'
     }: PermissionUpdateRequest = req.body;
 

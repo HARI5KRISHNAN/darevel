@@ -1,7 +1,7 @@
 {
-  "name": "whooper-backend",
+  "name": "darevel-chat-backend",
   "version": "1.0.0",
-  "description": "Backend for the Whooper Kubernetes Dashboard",
+  "description": "Backend for the Darevel Chat Kubernetes Dashboard",
   "main": "dist/server.js",
   "scripts": {
     "dev": "bash scripts/dev.sh",

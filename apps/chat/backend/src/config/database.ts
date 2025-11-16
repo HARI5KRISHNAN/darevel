@@ -6,7 +6,7 @@
 
 import mongoose from 'mongoose';
 
-const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost:27017/whooper';
+const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost:27017/darevel_chat';
 
 let isConnected = false;
 

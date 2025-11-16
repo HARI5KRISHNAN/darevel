@@ -13,9 +13,9 @@ import path from 'path';
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
-  user: process.env.POSTGRES_USER || 'whooper',
-  password: process.env.POSTGRES_PASSWORD || 'whooper123',
-  database: process.env.POSTGRES_DB || 'whooper',
+  user: process.env.POSTGRES_USER || 'darevel_chat',
+  password: process.env.POSTGRES_PASSWORD || 'darevel_chat123',
+  database: process.env.POSTGRES_DB || 'darevel_chat',
 };
 
 /**
@@ -95,7 +95,7 @@ export async function initializeDatabase(): Promise<boolean> {
     if (error.code === 'ECONNREFUSED') {
       console.log('');
       console.log('⚠️  PostgreSQL is not running. To start it:');
-      console.log('   Docker: docker run -d --name whooper-postgres -e POSTGRES_USER=whooper -e POSTGRES_PASSWORD=whooper123 -e POSTGRES_DB=whooper -p 5432:5432 postgres:15');
+      console.log('   Docker: docker run -d --name darevel-chat-postgres -e POSTGRES_USER=darevel_chat -e POSTGRES_PASSWORD=darevel_chat123 -e POSTGRES_DB=darevel_chat -p 5432:5432 postgres:15');
       console.log('   Or: Update DB credentials in .env file');
       console.log('');
       console.log('🔄 Server will use in-memory storage instead');

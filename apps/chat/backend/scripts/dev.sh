@@ -5,7 +5,7 @@
 
 set -e
 
-echo "🚀 Starting Whooper Chat Backend..."
+echo "🚀 Starting Darevel Chat Backend..."
 echo ""
 
 # Check if PostgreSQL is already running on port 5432
@@ -33,13 +33,13 @@ if ! command -v docker &> /dev/null; then
 fi
 
 # Check if PostgreSQL container is already running
-if docker ps | grep -q whooper-postgres; then
+if docker ps | grep -q darevel-chat-postgres; then
     echo "✅ PostgreSQL container already running"
 else
     # Check if container exists but is stopped
-    if docker ps -a | grep -q whooper-postgres; then
+    if docker ps -a | grep -q darevel-chat-postgres; then
         echo "🔄 Starting existing PostgreSQL container..."
-        docker start whooper-postgres
+        docker start darevel-chat-postgres
     else
         echo "📦 Starting PostgreSQL container..."
         docker-compose up -d postgres 2>&1 | grep -v "port is already allocated" || true
@@ -48,7 +48,7 @@ else
         echo "⏳ Waiting for PostgreSQL to be ready..."
         timeout=30
         counter=0
-        until docker exec whooper-postgres pg_isready -U whooper > /dev/null 2>&1; do
+        until docker exec darevel-chat-postgres pg_isready -U darevel_chat > /dev/null 2>&1; do
             counter=$((counter + 1))
             if [ $counter -gt $timeout ]; then
                 echo "❌ PostgreSQL failed to start in time"
