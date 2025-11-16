@@ -35,25 +35,55 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
     const [availableUsers, setAvailableUsers] = useState<User[]>([]);
     const [showUserList, setShowUserList] = useState(false);
 
+    // Helper function to create consistent channel ID for direct messages
+    const createDirectMessageChannelId = (userId1: number, userId2: number): string => {
+        // Sort user IDs to ensure consistent channel ID regardless of who initiates
+        const [smallerId, largerId] = [userId1, userId2].sort((a, b) => a - b);
+        return `dm-${smallerId}-${largerId}`;
+    };
+
     // WebSocket message handler
     const handleWebSocketMessage = useCallback((message: Message) => {
         console.log('📩 Received message via WebSocket:', message);
 
-        setConversations(prev => prev.map(convo => {
-            if (convo.id === message.channelId) {
-                // Check if message already exists
-                const exists = convo.messages.some(m => m.id === message.id);
-                if (exists) return convo;
+        setConversations(prev => {
+            const existingConvo = prev.find(c => c.id === message.channelId);
 
-                return {
-                    ...convo,
-                    messages: [...convo.messages, message],
-                    lastMessage: message.content || 'New message',
-                    timestamp: 'just now'
-                };
+            if (existingConvo) {
+                // Update existing conversation
+                return prev.map(convo => {
+                    if (convo.id === message.channelId) {
+                        // Check if message already exists
+                        const exists = convo.messages.some(m => m.id === message.id);
+                        if (exists) return convo;
+
+                        return {
+                            ...convo,
+                            messages: [...convo.messages, message],
+                            lastMessage: message.content || 'New message',
+                            timestamp: 'just now'
+                        };
+                    }
+                    return convo;
+                });
+            } else {
+                // Auto-create conversation if message arrives for non-existent channel
+                // This happens when someone messages you before you open their conversation
+                if (message.sender && message.channelId?.startsWith('dm-')) {
+                    const newConvo: DirectConversation = {
+                        id: message.channelId,
+                        name: message.sender.name,
+                        avatar: message.sender.avatar,
+                        lastMessage: message.content || 'New message',
+                        timestamp: 'just now',
+                        online: false,
+                        messages: [message]
+                    };
+                    return [newConvo, ...prev];
+                }
+                return prev;
             }
-            return convo;
-        }));
+        });
     }, []);
 
     // Connect to WebSocket for real-time messages
@@ -131,8 +161,13 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
 
     // Start a new conversation with a user
     const startConversationWithUser = (selectedUser: User) => {
+        if (!user) return;
+
+        // Create consistent channel ID using both user IDs
+        const channelId = createDirectMessageChannelId(user.id, selectedUser.id);
+
         // Check if conversation already exists
-        const existingConvo = conversations.find(c => c.id === `user-${selectedUser.id}`);
+        const existingConvo = conversations.find(c => c.id === channelId);
 
         if (existingConvo) {
             setSelectedConversationId(existingConvo.id);
@@ -142,7 +177,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
 
         // Create new conversation
         const newConversation: DirectConversation = {
-            id: `user-${selectedUser.id}`,
+            id: channelId,
             name: selectedUser.name,
             avatar: selectedUser.avatar,
             lastMessage: 'Start a conversation...',
