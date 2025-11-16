@@ -2,10 +2,12 @@ FROM maven:3.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
-# Copy parent pom and all modules
+# Copy parent pom and all modules (Maven needs to see all modules)
 COPY pom.xml .
 COPY common ./common
+COPY auth-service ./auth-service
 COPY chat-service ./chat-service
+COPY permissions-service ./permissions-service
 
 # Build the application
 RUN mvn clean package -DskipTests -pl chat-service -am
