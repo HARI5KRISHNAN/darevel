@@ -2,10 +2,10 @@ FROM maven:3.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
-# Copy parent pom first
-COPY ../pom.xml ./parent-pom.xml
-COPY ../common ./common
-COPY . .
+# Copy parent pom and all modules
+COPY pom.xml .
+COPY common ./common
+COPY auth-service ./auth-service
 
 # Build the application
 RUN mvn clean package -DskipTests -pl auth-service -am

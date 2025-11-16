@@ -24,8 +24,8 @@ services:
   # Auth Service
   auth-service:
     build:
-      context: ./auth-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: auth-service/Dockerfile
     container_name: darevel-auth-service
     environment:
       - DB_HOST=postgres
@@ -46,8 +46,8 @@ services:
   # Chat Service
   chat-service:
     build:
-      context: ./chat-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: chat-service/Dockerfile
     container_name: darevel-chat-service
     environment:
       - DB_HOST=postgres
@@ -70,8 +70,8 @@ services:
   # Permissions Service
   permissions-service:
     build:
-      context: ./permissions-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: permissions-service/Dockerfile
     container_name: darevel-permissions-service
     environment:
       - DB_HOST=postgres
