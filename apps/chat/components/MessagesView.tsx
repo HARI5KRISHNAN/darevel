@@ -34,12 +34,31 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
     const [availableUsers, setAvailableUsers] = useState<User[]>([]);
     const [showUserList, setShowUserList] = useState(false);
+    const [showGroupModal, setShowGroupModal] = useState(false);
+    const [groupName, setGroupName] = useState('');
+    const [selectedGroupMembers, setSelectedGroupMembers] = useState<User[]>([]);
 
     // Helper function to create consistent channel ID for direct messages
     const createDirectMessageChannelId = (userId1: number, userId2: number): string => {
         // Sort user IDs to ensure consistent channel ID regardless of who initiates
         const [smallerId, largerId] = [userId1, userId2].sort((a, b) => a - b);
         return `dm-${smallerId}-${largerId}`;
+    };
+
+    // Helper to save conversation settings to localStorage
+    const saveConversationSettings = (convos: DirectConversation[]) => {
+        const settings = convos.map(c => ({
+            id: c.id,
+            isPinned: c.isPinned,
+            isMuted: c.isMuted
+        }));
+        localStorage.setItem('conversationSettings', JSON.stringify(settings));
+    };
+
+    // Helper to load conversation settings from localStorage
+    const loadConversationSettings = () => {
+        const saved = localStorage.getItem('conversationSettings');
+        return saved ? JSON.parse(saved) : [];
     };
 
     // WebSocket message handler
@@ -154,8 +173,15 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
                     }
                 }
 
-                setConversations(loadedConversations);
-                console.log(`✓ Loaded ${loadedConversations.length} conversations`);
+                // Apply saved pin/mute settings from localStorage
+                const savedSettings = loadConversationSettings();
+                const conversationsWithSettings = loadedConversations.map(convo => {
+                    const saved = savedSettings.find((s: any) => s.id === convo.id);
+                    return saved ? { ...convo, isPinned: saved.isPinned, isMuted: saved.isMuted } : convo;
+                });
+
+                setConversations(conversationsWithSettings);
+                console.log(`✓ Loaded ${conversationsWithSettings.length} conversations`);
             } catch (error) {
                 console.error('Error loading user conversations:', error);
             }
@@ -212,10 +238,18 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
 
     const selectedConversation = conversations.find(c => c.id === selectedConversationId);
 
-    const filteredConversations = conversations.filter(c =>
-        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // Filter and sort conversations - pinned ones at top
+    const filteredConversations = conversations
+        .filter(c =>
+            c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .sort((a, b) => {
+            // Pinned conversations first
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
+            return 0;
+        });
 
     // Filter users based on search query
     const filteredUsers = availableUsers.filter(u =>
@@ -256,6 +290,72 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
         setConversations(prev => [newConversation, ...prev]);
         setSelectedConversationId(newConversation.id);
         setShowUserList(false);
+    };
+
+    // Toggle pin status
+    const handleTogglePin = (conversationId: string) => {
+        setConversations(prev => {
+            const pinnedCount = prev.filter(c => c.isPinned).length;
+            const conversation = prev.find(c => c.id === conversationId);
+
+            // Check if trying to pin and already at max
+            if (conversation && !conversation.isPinned && pinnedCount >= 7) {
+                alert('Maximum 7 conversations can be pinned');
+                return prev;
+            }
+
+            const updated = prev.map(c =>
+                c.id === conversationId ? { ...c, isPinned: !c.isPinned } : c
+            );
+            saveConversationSettings(updated);
+            return updated;
+        });
+    };
+
+    // Toggle mute status
+    const handleToggleMute = (conversationId: string) => {
+        setConversations(prev => {
+            const updated = prev.map(c =>
+                c.id === conversationId ? { ...c, isMuted: !c.isMuted } : c
+            );
+            saveConversationSettings(updated);
+            return updated;
+        });
+    };
+
+    // Create group chat
+    const handleCreateGroup = () => {
+        if (!user) return;
+        if (!groupName.trim()) {
+            alert('Please enter a group name');
+            return;
+        }
+        if (selectedGroupMembers.length === 0) {
+            alert('Please select at least one member');
+            return;
+        }
+
+        // Create group channel ID
+        const groupId = `group-${Date.now()}`;
+        const memberIds = [user, ...selectedGroupMembers].map(u => u.id).sort();
+
+        const newGroup: DirectConversation = {
+            id: groupId,
+            name: groupName,
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(groupName)}&background=random`,
+            lastMessage: 'Group created',
+            timestamp: 'now',
+            online: false,
+            messages: [],
+            isGroup: true,
+            members: [user, ...selectedGroupMembers]
+        };
+
+        setConversations(prev => [newGroup, ...prev]);
+        setSelectedConversationId(groupId);
+        setShowGroupModal(false);
+        setGroupName('');
+        setSelectedGroupMembers([]);
     };
 
     const handleSendMessage = async (message: string, file?: File) => {
@@ -429,17 +529,26 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
                             <p className="text-xs text-text-secondary truncate">All your conversations</p>
                         </div>
                     )}
-                    {!isCollapsed && hasUnreadMessages && (
-                        <button 
-                            onClick={handleMarkAllAsRead}
+                    {!isCollapsed && (
+                        <button
+                            onClick={() => setShowGroupModal(true)}
                             className="text-xs font-semibold text-accent hover:underline ml-2 shrink-0"
-                            title="Mark all as read"
+                            title="Create Group"
                         >
-                            Mark all as read
+                            + Group
                         </button>
                     )}
-                     <button 
-                        onClick={() => setIsCollapsed(!isCollapsed)} 
+                    {!isCollapsed && hasUnreadMessages && (
+                        <button
+                            onClick={handleMarkAllAsRead}
+                            className="text-xs font-semibold text-text-secondary hover:underline ml-2 shrink-0"
+                            title="Mark all as read"
+                        >
+                            Mark all
+                        </button>
+                    )}
+                     <button
+                        onClick={() => setIsCollapsed(!isCollapsed)}
                         className="text-text-secondary hover:text-text-primary p-1 ml-2 shrink-0"
                         aria-label={isCollapsed ? 'Expand messages list' : 'Collapse messages list'}
                     >
@@ -503,6 +612,8 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
                                         isActive={dm.id === selectedConversationId}
                                         isCollapsed={isCollapsed}
                                         onClick={() => setSelectedConversationId(dm.id)}
+                                        onTogglePin={handleTogglePin}
+                                        onToggleMute={handleToggleMute}
                                     />
                                 ))}
                             </div>
@@ -553,6 +664,86 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
                     </div>
                 )}
             </main>
+
+            {/* Group Creation Modal */}
+            {showGroupModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-background-panel rounded-lg shadow-xl max-w-md w-full p-6">
+                        <h2 className="text-xl font-bold text-text-primary mb-4">Create Group Chat</h2>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-semibold text-text-primary mb-2">
+                                Group Name
+                            </label>
+                            <input
+                                type="text"
+                                value={groupName}
+                                onChange={(e) => setGroupName(e.target.value)}
+                                className="w-full px-3 py-2 border border-border-color rounded-md bg-background-main text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                                placeholder="Enter group name..."
+                            />
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-semibold text-text-primary mb-2">
+                                Select Members ({selectedGroupMembers.length} selected)
+                            </label>
+                            <div className="max-h-60 overflow-y-auto border border-border-color rounded-md">
+                                {availableUsers.map(availUser => (
+                                    <div
+                                        key={availUser.id}
+                                        onClick={() => {
+                                            if (selectedGroupMembers.find(u => u.id === availUser.id)) {
+                                                setSelectedGroupMembers(prev => prev.filter(u => u.id !== availUser.id));
+                                            } else {
+                                                setSelectedGroupMembers(prev => [...prev, availUser]);
+                                            }
+                                        }}
+                                        className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-background-main transition-colors ${
+                                            selectedGroupMembers.find(u => u.id === availUser.id) ? 'bg-accent-soft' : ''
+                                        }`}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={!!selectedGroupMembers.find(u => u.id === availUser.id)}
+                                            onChange={() => {}}
+                                            className="w-4 h-4"
+                                        />
+                                        <img
+                                            src={availUser.avatar}
+                                            alt={availUser.name}
+                                            className="w-8 h-8 rounded-full object-cover"
+                                        />
+                                        <div>
+                                            <p className="font-semibold text-sm text-text-primary">{availUser.name}</p>
+                                            <p className="text-xs text-text-secondary">{availUser.email}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 justify-end">
+                            <button
+                                onClick={() => {
+                                    setShowGroupModal(false);
+                                    setGroupName('');
+                                    setSelectedGroupMembers([]);
+                                }}
+                                className="px-4 py-2 bg-background-main border border-border-color text-text-primary font-semibold rounded-lg hover:bg-input-field transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleCreateGroup}
+                                className="px-4 py-2 bg-accent text-white font-semibold rounded-lg hover:bg-accent-hover transition-colors"
+                            >
+                                Create Group
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

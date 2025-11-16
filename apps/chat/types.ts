@@ -66,6 +66,10 @@ export interface DirectMessage {
   timestamp: string;
   online?: boolean;
   unreadCount?: number;
+  isPinned?: boolean;
+  isMuted?: boolean;
+  isGroup?: boolean;
+  members?: User[];
 }
 
 export interface DirectConversation extends DirectMessage {
