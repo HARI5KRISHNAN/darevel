@@ -1,8 +1,8 @@
 // This file will centralize all API calls to the backend.
 import { Message, User } from '../types';
 
-// Prefer explicit backend URL from env; fall back to Vite proxy '/api'
-const API_BASE_URL = import.meta?.env?.VITE_BACKEND_URL || '/api';
+// Prefer explicit backend URL from env; fall back to localhost backend
+const API_BASE_URL = import.meta?.env?.VITE_BACKEND_URL || 'http://localhost:5001/api';
 
 export const getMessages = async (channelId: string, userId: number): Promise<Message[]> => {
     const response = await fetch(`${API_BASE_URL}/chat/${channelId}/messages?userId=${userId}`);
