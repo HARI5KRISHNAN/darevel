@@ -93,7 +93,7 @@ public class PermissionsController {
     }
 
     @DeleteMapping("/members/{id}")
-    public ResponseEntity<ApiResponse<Member>> deleteMember(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Member>> deleteMember(@PathVariable("id") Long id) {
         try {
             Member member = permissionsService.deleteMember(id);
             String message = "Successfully deleted member " + member.getName();
@@ -140,7 +140,7 @@ public class PermissionsController {
     }
 
     @GetMapping("/audit/{id}")
-    public ResponseEntity<ApiResponse<Object>> getAuditById(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<Object>> getAuditById(@PathVariable("id") String id) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(ApiResponse.error("Audit logs are not available. MongoDB has been removed from this application."));
     }

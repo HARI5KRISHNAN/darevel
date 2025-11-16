@@ -20,14 +20,14 @@ public class ChatController {
     private final ChatService chatService;
 
     @GetMapping("/{channelId}/messages")
-    public ResponseEntity<ApiResponse<List<MessageDto>>> getMessages(@PathVariable String channelId) {
+    public ResponseEntity<ApiResponse<List<MessageDto>>> getMessages(@PathVariable("channelId") String channelId) {
         List<MessageDto> messages = chatService.getMessages(channelId);
         return ResponseEntity.ok(ApiResponse.success(messages));
     }
 
     @PostMapping("/{channelId}/messages")
     public ResponseEntity<ApiResponse<MessageDto>> sendMessage(
-            @PathVariable String channelId,
+            @PathVariable("channelId") String channelId,
             @Valid @RequestBody SendMessageRequest request) {
         try {
             MessageDto message = chatService.sendMessage(channelId, request);
@@ -45,7 +45,7 @@ public class ChatController {
     }
 
     @DeleteMapping("/{channelId}/messages")
-    public ResponseEntity<ApiResponse<Void>> clearChannelMessages(@PathVariable String channelId) {
+    public ResponseEntity<ApiResponse<Void>> clearChannelMessages(@PathVariable("channelId") String channelId) {
         chatService.clearChannelMessages(channelId);
         return ResponseEntity.ok(ApiResponse.success("Channel messages deleted successfully", null));
     }
