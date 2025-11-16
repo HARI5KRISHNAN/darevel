@@ -1,0 +1,134 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: darevel-chat-postgres
+    environment:
+      POSTGRES_USER: darevel_chat
+      POSTGRES_PASSWORD: darevel_chat123
+      POSTGRES_DB: darevel_chat
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - darevel-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U darevel_chat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: darevel-auth-service
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - POSTGRES_USER=darevel_chat
+      - POSTGRES_PASSWORD=darevel_chat123
+      - POSTGRES_DB=darevel_chat
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  # Chat Service
+  chat-service:
+    build:
+      context: ./chat-service
+      dockerfile: Dockerfile
+    container_name: darevel-chat-service
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - POSTGRES_USER=darevel_chat
+      - POSTGRES_PASSWORD=darevel_chat123
+      - POSTGRES_DB=darevel_chat
+      - AUTH_SERVICE_URL=http://auth-service:8081
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  # Permissions Service
+  permissions-service:
+    build:
+      context: ./permissions-service
+      dockerfile: Dockerfile
+    container_name: darevel-permissions-service
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - POSTGRES_USER=darevel_chat
+      - POSTGRES_PASSWORD=darevel_chat123
+      - POSTGRES_DB=darevel_chat
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - darevel-network
+    restart: unless-stopped
+    volumes:
+      # Mount Ansible playbooks if needed
+      - ./ansible:/app/src/ansible:ro
+
+  # Prometheus (Optional - for metrics monitoring)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: darevel-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  # Grafana (Optional - for metrics visualization)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: darevel-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - darevel-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  darevel-network:
+    driver: bridge
