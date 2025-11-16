@@ -15,8 +15,6 @@ import { promisify } from 'util';
 import { Request, Response } from 'express';
 import path from 'path';
 import { existsSync } from 'fs';
-import { PermissionAudit } from '../models/PermissionAudit';
-import { isDatabaseConnected } from '../config/database';
 
 const execAsync = promisify(exec);
 
@@ -58,7 +56,6 @@ let members: Member[] = [
  */
 export const updatePermission = async (req: Request, res: Response): Promise<void> => {
   const startTime = Date.now();
-  let auditLogId: string | null = null;
 
   try {
     const {
@@ -149,72 +146,22 @@ export const updatePermission = async (req: Request, res: Response): Promise<voi
     if (stderr && !stderr.includes('warnings')) {
       console.error('❌ Ansible execution error:', stderr);
 
-      // Log failed audit
-      if (isDatabaseConnected()) {
-        try {
-          const audit = await PermissionAudit.create({
-            executor,
-            targetUser: email,
-            tool,
-            access,
-            result: 'failed',
-            output: stdout || '',
-            errorMessage: stderr,
-            metadata: {
-              namespace,
-              gitRepo,
-              gitServerType,
-              executionTime
-            }
-          });
-          auditLogId = audit._id.toString();
-          console.log(`📝 Audit log created: ${auditLogId}`);
-        } catch (auditError: any) {
-          console.error('Failed to create audit log:', auditError.message);
-        }
-      }
-
       res.status(500).json({
         success: false,
         message: 'Permission update failed',
         error: stderr,
-        stdout,
-        auditLogId
+        stdout
       });
       return;
     }
 
-    // Success - Log audit
+    // Success
     console.log(`✅ Successfully updated permissions for ${user} on ${tool}`);
-
-    if (isDatabaseConnected()) {
-      try {
-        const audit = await PermissionAudit.create({
-          executor,
-          targetUser: email,
-          tool,
-          access,
-          result: 'success',
-          output: stdout || '',
-          metadata: {
-            namespace,
-            gitRepo,
-            gitServerType,
-            executionTime
-          }
-        });
-        auditLogId = audit._id.toString();
-        console.log(`📝 Audit log created: ${auditLogId}`);
-      } catch (auditError: any) {
-        console.error('Failed to create audit log:', auditError.message);
-      }
-    }
 
     res.json({
       success: true,
       message: `✅ Successfully applied ${access} permissions for ${user} on ${tool}`,
       output: stdout,
-      auditLogId,
       details: {
         user,
         email,
@@ -229,43 +176,12 @@ export const updatePermission = async (req: Request, res: Response): Promise<voi
   } catch (error: any) {
     console.error('Error updating permission:', error);
 
-    const executionTime = Date.now() - startTime;
-    const { email, tool, access, executor = 'system', namespace, gitRepo, gitServerType } = req.body;
-
-    // Log failed audit for exceptions
-    if (isDatabaseConnected() && email && tool && access) {
-      try {
-        const audit = await PermissionAudit.create({
-          executor,
-          targetUser: email,
-          tool,
-          access,
-          result: 'failed',
-          output: '',
-          errorMessage: error.message || String(error),
-          metadata: {
-            namespace,
-            gitRepo,
-            gitServerType,
-            executionTime,
-            errorCode: error.code,
-            errorSignal: error.signal
-          }
-        });
-        auditLogId = audit._id.toString();
-        console.log(`📝 Audit log created for error: ${auditLogId}`);
-      } catch (auditError: any) {
-        console.error('Failed to create audit log for error:', auditError.message);
-      }
-    }
-
     // Handle specific error types
     if (error.code === 'ENOENT') {
       res.status(500).json({
         success: false,
         message: 'Ansible is not installed or not in PATH. Please install Ansible first.',
-        error: error.message,
-        auditLogId
+        error: error.message
       });
       return;
     }
@@ -274,8 +190,7 @@ export const updatePermission = async (req: Request, res: Response): Promise<voi
       res.status(500).json({
         success: false,
         message: 'Ansible execution timed out (exceeded 2 minutes)',
-        error: error.message,
-        auditLogId
+        error: error.message
       });
       return;
     }
@@ -283,8 +198,7 @@ export const updatePermission = async (req: Request, res: Response): Promise<voi
     res.status(500).json({
       success: false,
       message: 'Failed to update permission',
-      error: error.message,
-      auditLogId
+      error: error.message
     });
   }
 };
