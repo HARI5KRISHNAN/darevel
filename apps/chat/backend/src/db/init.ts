@@ -19,64 +19,156 @@ const dbConfig = {
 };
 
 /**
+ * Try to connect as superuser using peer authentication
+ * This works on Unix systems where PostgreSQL is configured for peer auth
+ */
+async function connectAsSuperuser(): Promise<Pool | null> {
+  const superuserConfigs = [
+    // Try peer authentication as 'postgres' user (no password, Unix socket)
+    {
+      host: '/var/run/postgresql', // Unix socket
+      port: dbConfig.port,
+      user: 'postgres',
+      database: 'postgres',
+    },
+    // Fallback to TCP with postgres user (if password is set)
+    {
+      host: dbConfig.host,
+      port: dbConfig.port,
+      user: 'postgres',
+      password: process.env.POSTGRES_SUPERUSER_PASSWORD || '',
+      database: 'postgres',
+    },
+  ];
+
+  for (const config of superuserConfigs) {
+    try {
+      const pool = new Pool(config);
+      await pool.query('SELECT 1'); // Test connection
+      console.log(`✅ Connected as superuser: ${config.user}`);
+      return pool;
+    } catch (error: any) {
+      // Try next config
+      continue;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Create user and database if they don't exist
+ */
+async function createUserAndDatabase(adminPool: Pool): Promise<void> {
+  // Check if PostgreSQL user exists
+  const userCheckResult = await adminPool.query(
+    `SELECT 1 FROM pg_roles WHERE rolname = $1`,
+    [dbConfig.user]
+  );
+
+  if (userCheckResult.rows.length === 0) {
+    console.log(`👤 Creating PostgreSQL user: ${dbConfig.user}`);
+    await adminPool.query(
+      `CREATE USER ${dbConfig.user} WITH ENCRYPTED PASSWORD '${dbConfig.password}'`
+    );
+    await adminPool.query(
+      `ALTER USER ${dbConfig.user} CREATEDB`
+    );
+    console.log(`✅ User created: ${dbConfig.user}`);
+  } else {
+    console.log(`✅ User already exists: ${dbConfig.user}`);
+  }
+
+  // Check if our database exists
+  const dbCheckResult = await adminPool.query(
+    `SELECT 1 FROM pg_database WHERE datname = $1`,
+    [dbConfig.database]
+  );
+
+  if (dbCheckResult.rows.length === 0) {
+    console.log(`📦 Creating database: ${dbConfig.database}`);
+    await adminPool.query(`CREATE DATABASE ${dbConfig.database} OWNER ${dbConfig.user}`);
+    console.log(`✅ Database created: ${dbConfig.database}`);
+  } else {
+    console.log(`✅ Database already exists: ${dbConfig.database}`);
+  }
+
+  // Grant privileges to user on the database
+  await adminPool.query(
+    `GRANT ALL PRIVILEGES ON DATABASE ${dbConfig.database} TO ${dbConfig.user}`
+  );
+  console.log(`✅ Granted privileges to user: ${dbConfig.user}`);
+}
+
+/**
  * Initialize database and run migrations
  */
 export async function initializeDatabase(): Promise<boolean> {
   console.log('🔄 Initializing database...');
 
-  // First, connect to postgres database to create our database if needed
-  const adminPool = new Pool({
-    ...dbConfig,
-    database: 'postgres', // Connect to default postgres database
-  });
+  let adminPool: Pool | null = null;
+  let needsUserCreation = false;
 
   try {
-    // Check if PostgreSQL user exists
-    const userCheckResult = await adminPool.query(
-      `SELECT 1 FROM pg_roles WHERE rolname = $1`,
-      [dbConfig.user]
-    );
+    // First, try to connect with application credentials
+    adminPool = new Pool({
+      ...dbConfig,
+      database: 'postgres', // Connect to default postgres database
+    });
 
-    if (userCheckResult.rows.length === 0) {
-      console.log(`👤 Creating PostgreSQL user: ${dbConfig.user}`);
-      await adminPool.query(
-        `CREATE USER ${dbConfig.user} WITH ENCRYPTED PASSWORD '${dbConfig.password}'`
-      );
-      await adminPool.query(
-        `ALTER USER ${dbConfig.user} CREATEDB`
-      );
-      console.log(`✅ User created: ${dbConfig.user}`);
+    await adminPool.query('SELECT 1'); // Test connection
+    console.log(`✅ Connected as: ${dbConfig.user}`);
+
+  } catch (error: any) {
+    // If authentication fails, we need to create the user
+    if (error.message.includes('password authentication failed') ||
+        error.message.includes('role') && error.message.includes('does not exist')) {
+
+      console.log(`⚠️  User ${dbConfig.user} does not exist or auth failed`);
+      console.log(`🔧 Attempting to create user automatically...`);
+
+      // Close the failed connection
+      if (adminPool) {
+        await adminPool.end().catch(() => {});
+      }
+
+      // Try to connect as superuser
+      adminPool = await connectAsSuperuser();
+
+      if (!adminPool) {
+        console.log('');
+        console.log('❌ Could not connect as PostgreSQL superuser');
+        console.log('');
+        console.log('To fix this, run ONE of these commands:');
+        console.log('');
+        console.log('Option 1 - Using sudo:');
+        console.log('  sudo -u postgres psql -c "CREATE USER darevel_chat WITH ENCRYPTED PASSWORD \'darevel_chat123\'; ALTER USER darevel_chat CREATEDB;"');
+        console.log('');
+        console.log('Option 2 - Manual psql:');
+        console.log('  psql -U postgres -c "CREATE USER darevel_chat WITH ENCRYPTED PASSWORD \'darevel_chat123\'; ALTER USER darevel_chat CREATEDB;"');
+        console.log('');
+        throw new Error('PostgreSQL superuser access required to create database user');
+      }
+
+      needsUserCreation = true;
     } else {
-      console.log(`✅ User already exists: ${dbConfig.user}`);
+      // Different error, rethrow
+      throw error;
+    }
+  }
+
+  try {
+    // Create user and database if needed
+    if (needsUserCreation || adminPool) {
+      await createUserAndDatabase(adminPool!);
     }
 
-    // Check if our database exists
-    const dbCheckResult = await adminPool.query(
-      `SELECT 1 FROM pg_database WHERE datname = $1`,
-      [dbConfig.database]
-    );
+    await adminPool!.end();
 
-    if (dbCheckResult.rows.length === 0) {
-      console.log(`📦 Creating database: ${dbConfig.database}`);
-      await adminPool.query(`CREATE DATABASE ${dbConfig.database}`);
-      console.log(`✅ Database created: ${dbConfig.database}`);
-    } else {
-      console.log(`✅ Database already exists: ${dbConfig.database}`);
-    }
-
-    // Grant privileges to user on the database
-    await adminPool.query(
-      `GRANT ALL PRIVILEGES ON DATABASE ${dbConfig.database} TO ${dbConfig.user}`
-    );
-    console.log(`✅ Granted privileges to user: ${dbConfig.user}`);
-
-    await adminPool.end();
-
-    // Now connect to our database and run migrations
+    // Now connect to our application database and run migrations
     const pool = new Pool(dbConfig);
 
     console.log('📋 Running database migrations...');
-    // Use path relative to project root for ts-node-dev compatibility
     const schemaPath = path.join(process.cwd(), 'src', 'db', 'schema.sql');
     console.log(`Reading schema from: ${schemaPath}`);
     const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
@@ -95,17 +187,10 @@ export async function initializeDatabase(): Promise<boolean> {
     if (error.code === 'ECONNREFUSED') {
       console.log('');
       console.log('⚠️  PostgreSQL is not running. To start it:');
-      console.log('   Docker: docker run -d --name darevel-chat-postgres -e POSTGRES_USER=darevel_chat -e POSTGRES_PASSWORD=darevel_chat123 -e POSTGRES_DB=darevel_chat -p 5432:5432 postgres:15');
-      console.log('   Or: Update DB credentials in .env file');
+      console.log('   Docker: docker-compose up -d postgres');
+      console.log('   Or: npm run db:start');
       console.log('');
       console.log('❌ Server cannot start without PostgreSQL database');
-      console.log('');
-    } else if (error.message.includes('password authentication failed')) {
-      console.log('');
-      console.log('⚠️  PostgreSQL authentication failed. Run this SQL to create the user:');
-      console.log('   sudo -u postgres psql -c "CREATE USER darevel_chat WITH ENCRYPTED PASSWORD \'darevel_chat123\'; ALTER USER darevel_chat CREATEDB; CREATE DATABASE darevel_chat OWNER darevel_chat;"');
-      console.log('');
-      console.log('❌ Server cannot start without database access');
       console.log('');
     }
 
