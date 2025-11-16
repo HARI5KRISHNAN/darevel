@@ -145,7 +145,15 @@ io.on('connection', (socket) => {
 httpServer.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
 
-  // Initialize MongoDB connection (optional - server will run without it)
+  // Initialize PostgreSQL database (auto-setup tables)
+  const { initializeDatabase } = await import('./db/init.js');
+  const dbInitialized = await initializeDatabase();
+
+  // Initialize database switcher (determines which controllers to use)
+  const { initializeDatabaseSwitch } = await import('./config/db-switch.js');
+  await initializeDatabaseSwitch();
+
+  // Initialize MongoDB connection (optional - for audit logs)
   await connectDatabase();
 });
 
