@@ -169,8 +169,26 @@ export async function initializeDatabase(): Promise<boolean> {
     const pool = new Pool(dbConfig);
 
     console.log('📋 Running database migrations...');
-    // Use __dirname to get path relative to this file
-    const schemaPath = path.join(__dirname, 'schema.sql');
+
+    // Try multiple path resolution strategies for cross-platform compatibility
+    const possiblePaths = [
+      path.join(__dirname, 'schema.sql'),
+      path.join(process.cwd(), 'src', 'db', 'schema.sql'),
+      path.resolve(__dirname, 'schema.sql'),
+    ];
+
+    let schemaPath: string | null = null;
+    for (const tryPath of possiblePaths) {
+      if (fs.existsSync(tryPath)) {
+        schemaPath = tryPath;
+        break;
+      }
+    }
+
+    if (!schemaPath) {
+      throw new Error(`schema.sql not found. Tried: ${possiblePaths.join(', ')}`);
+    }
+
     console.log(`Reading schema from: ${schemaPath}`);
     const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
 
