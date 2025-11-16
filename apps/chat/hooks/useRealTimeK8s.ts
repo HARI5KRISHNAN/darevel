@@ -39,8 +39,8 @@ export const useRealTimeK8s = () => {
     // For now, disable real-time updates
     console.warn('Kubernetes real-time updates disabled - Socket.IO not available in Java backend');
     setConnectionStatus('disconnected');
-    setLoading(false);
-    return; // Disable WebSocket connection for now
+    // No-op: WebSocket connection disabled
+    return () => {}; // Cleanup function
 
     /* Socket.IO code disabled
     const socket: Socket = io(SOCKET_URL, {
