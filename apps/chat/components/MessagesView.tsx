@@ -3,7 +3,7 @@ import MessageListItem from './MessageListItem';
 import { DirectConversation, Role, Message, User } from '../types';
 import ConversationView from './ConversationView';
 import { DoubleArrowLeftIcon, DoubleArrowRightIcon, SearchIcon } from './icons';
-import { generateSummary as apiGenerateSummary, sendMessage as apiSendMessage, getMessages as apiGetMessages, transformBackendMessage } from '../services/api';
+import { generateSummary as apiGenerateSummary, sendMessage as apiSendMessage, getMessages as apiGetMessages, transformBackendMessage, getUserChannels } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 
 
@@ -96,6 +96,73 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
     useEffect(() => {
         fetchRegisteredUsers();
     }, []);
+
+    // Load user's conversations on mount
+    useEffect(() => {
+        if (!user) return;
+
+        const loadUserConversations = async () => {
+            try {
+                const channelIds = await getUserChannels(user.id);
+                console.log(`Loading ${channelIds.length} conversations for user ${user.id}`);
+
+                // Fetch all users to map channel IDs to user info
+                const AUTH_API_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:8081';
+                const response = await fetch(`${AUTH_API_URL}/api/auth/users`);
+                const data = await response.json();
+                const allUsers = (data.data || data) as User[];
+
+                const loadedConversations: DirectConversation[] = [];
+
+                // Add general channel
+                loadedConversations.push({
+                    id: 'general',
+                    name: 'General Channel',
+                    avatar: 'https://ui-avatars.com/api/?name=General&background=4f46e5&color=fff',
+                    lastMessage: 'Welcome to the general channel',
+                    timestamp: 'now',
+                    online: true,
+                    messages: []
+                });
+
+                // Process each channel
+                for (const channelId of channelIds) {
+                    if (channelId === 'general') continue; // Already added
+
+                    // Parse direct message channel ID: dm-{userId1}-{userId2}
+                    if (channelId.startsWith('dm-')) {
+                        const parts = channelId.split('-');
+                        if (parts.length === 3) {
+                            const userId1 = parseInt(parts[1]);
+                            const userId2 = parseInt(parts[2]);
+                            // Get the other user's ID (not current user)
+                            const otherUserId = userId1 === user.id ? userId2 : userId1;
+                            const otherUser = allUsers.find(u => u.id === otherUserId);
+
+                            if (otherUser) {
+                                loadedConversations.push({
+                                    id: channelId,
+                                    name: otherUser.name,
+                                    avatar: otherUser.avatar,
+                                    lastMessage: 'Continue conversation...',
+                                    timestamp: 'earlier',
+                                    online: false,
+                                    messages: []
+                                });
+                            }
+                        }
+                    }
+                }
+
+                setConversations(loadedConversations);
+                console.log(`✓ Loaded ${loadedConversations.length} conversations`);
+            } catch (error) {
+                console.error('Error loading user conversations:', error);
+            }
+        };
+
+        loadUserConversations();
+    }, [user]);
 
     // Fetch messages when conversation is selected (initial load only)
     useEffect(() => {

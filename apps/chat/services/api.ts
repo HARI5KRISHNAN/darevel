@@ -39,6 +39,16 @@ export const getMessages = async (channelId: string): Promise<Message[]> => {
     return backendMessages.map(transformBackendMessage);
 };
 
+export const getUserChannels = async (userId: number): Promise<string[]> => {
+    const response = await fetch(`${API_BASE_URL}/chat/users/${userId}/channels`);
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch user channels');
+    }
+    const result = await response.json();
+    return result.data || result;
+};
+
 export const sendMessage = async (channelId: string, content: string, userId: number): Promise<Message> => {
     // Java backend only needs userId and content
     // It will fetch user details from Auth Service automatically

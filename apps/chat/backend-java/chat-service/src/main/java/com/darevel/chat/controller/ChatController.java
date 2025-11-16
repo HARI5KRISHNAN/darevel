@@ -19,6 +19,12 @@ public class ChatController {
 
     private final ChatService chatService;
 
+    @GetMapping("/users/{userId}/channels")
+    public ResponseEntity<ApiResponse<List<String>>> getUserChannels(@PathVariable("userId") Long userId) {
+        List<String> channels = chatService.getUserChannels(userId);
+        return ResponseEntity.ok(ApiResponse.success(channels));
+    }
+
     @GetMapping("/{channelId}/messages")
     public ResponseEntity<ApiResponse<List<MessageDto>>> getMessages(@PathVariable("channelId") String channelId) {
         List<MessageDto> messages = chatService.getMessages(channelId);

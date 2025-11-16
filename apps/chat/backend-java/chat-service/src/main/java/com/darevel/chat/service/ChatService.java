@@ -37,6 +37,10 @@ public class ChatService {
                 .collect(Collectors.toList());
     }
 
+    public List<String> getUserChannels(Long userId) {
+        return messageRepository.findDistinctChannelIdsByUserId(userId);
+    }
+
     @Transactional
     public MessageDto sendMessage(String channelId, SendMessageRequest request) {
         Message message = new Message();
