@@ -56,16 +56,37 @@ backend-java/
 
 ## Quick Start
 
-### Option 1: Docker Compose (Recommended)
+### 🚀 One-Command Startup (Easiest!)
 
-1. **Start all services with Docker Compose:**
+```bash
+cd apps/chat/backend-java
+npm install
+npm run dev
+```
+
+That's it! This single command will:
+- Start PostgreSQL in Docker
+- Build all Java services
+- Start all microservices
+- Start Prometheus and Grafana for monitoring
+
+**All services will be available at:**
+- 🔐 Auth Service: http://localhost:8081
+- 💬 Chat Service: http://localhost:8082
+- 🔑 Permissions Service: http://localhost:8083
+- 📊 Prometheus: http://localhost:9090
+- 📈 Grafana: http://localhost:3001 (admin/admin)
+
+### Alternative Startup Methods
+
+#### Option 1: Docker Compose (Recommended for Production)
 
 ```bash
 cd apps/chat/backend-java
 docker-compose up -d
 ```
 
-This will start:
+This will start all services in containers:
 - PostgreSQL (port 5432)
 - Auth Service (port 8081)
 - Chat Service (port 8082)
@@ -73,25 +94,25 @@ This will start:
 - Prometheus (port 9090)
 - Grafana (port 3001)
 
-2. **Check service health:**
+**Check service health:**
 
 ```bash
-# Auth Service
+npm run health
+# Or manually:
 curl http://localhost:8081/actuator/health
-
-# Chat Service
 curl http://localhost:8082/actuator/health
-
-# Permissions Service
 curl http://localhost:8083/actuator/health
 ```
 
-### Option 2: Local Development
+#### Option 2: Local Development (Advanced)
 
-1. **Start PostgreSQL:**
+For developers who want to run services locally:
 
 ```bash
-# Using Docker
+# Use the interactive script
+npm run dev:local
+
+# Or manually start PostgreSQL
 docker run -d \
   --name darevel-postgres \
   -e POSTGRES_USER=darevel_chat \
@@ -100,31 +121,28 @@ docker run -d \
   -p 5432:5432 \
   postgres:15-alpine
 
-# Or install PostgreSQL locally and create the database
-createuser darevel_chat -P
-createdb -O darevel_chat darevel_chat
-```
-
-2. **Build all services:**
-
-```bash
+# Build all services
 mvn clean install
+
+# Run each service in separate terminals
+cd auth-service && mvn spring-boot:run
+cd chat-service && mvn spring-boot:run
+cd permissions-service && mvn spring-boot:run
 ```
 
-3. **Run each service:**
+### Windows Users
 
-```bash
-# Terminal 1 - Auth Service
-cd auth-service
-mvn spring-boot:run
+Use the provided batch script:
 
-# Terminal 2 - Chat Service
-cd chat-service
-mvn spring-boot:run
+```cmd
+cd apps\chat\backend-java
+scripts\start-dev.bat
+```
 
-# Terminal 3 - Permissions Service
-cd permissions-service
-mvn spring-boot:run
+Or simply:
+
+```cmd
+npm run dev
 ```
 
 ## API Endpoints
@@ -285,6 +303,43 @@ Spring Boot DevTools is included for automatic restart during development:
 
 ```bash
 mvn spring-boot:run
+```
+
+### NPM Scripts Reference
+
+For convenience, several NPM scripts are available:
+
+```bash
+# Development
+npm run dev              # Start all services with Docker Compose (recommended)
+npm run dev:local        # Start services locally with PostgreSQL in Docker
+
+# Docker Management
+npm run docker:up        # Start all services with Docker Compose
+npm run docker:down      # Stop all services
+npm run docker:logs      # View logs from all services
+npm run docker:build     # Build Docker images
+
+# Database Management
+npm run db:start         # Start PostgreSQL in Docker
+npm run db:stop          # Stop PostgreSQL
+npm run db:remove        # Remove PostgreSQL container
+
+# Service Management
+npm run services:build   # Build all services with Maven
+npm run services:start   # Start all services locally (requires PostgreSQL)
+npm run auth:dev         # Start only Auth Service
+npm run chat:dev         # Start only Chat Service
+npm run permissions:dev  # Start only Permissions Service
+
+# Testing & Health
+npm run test             # Run all tests
+npm run health           # Check health of all services
+npm run clean            # Clean Maven build files
+
+# Setup
+npm run setup            # Build services and start with Docker Compose
+npm run stop             # Stop all services
 ```
 
 ## Deployment
