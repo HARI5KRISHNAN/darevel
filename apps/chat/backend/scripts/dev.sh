@@ -8,19 +8,33 @@ set -e
 echo "🚀 Starting Whooper Chat Backend..."
 echo ""
 
+# Check if PostgreSQL is already running on port 5432
+if nc -z localhost 5432 2>/dev/null || (exec 3<>/dev/tcp/localhost/5432) 2>/dev/null; then
+    echo "✅ PostgreSQL already running on port 5432"
+    echo "   Using existing PostgreSQL instance"
+    echo ""
+    echo "🔧 Starting backend server..."
+    npm run dev:server
+    exit 0
+fi
+
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
-    echo "⚠️  Docker not found. Installing PostgreSQL manually is required."
-    echo "   Or install Docker: https://docs.docker.com/get-docker/"
+    echo "⚠️  Docker not found. PostgreSQL is not running."
     echo ""
-    echo "🔄 Starting backend without database auto-setup..."
+    echo "Options:"
+    echo "1. Install Docker: https://docs.docker.com/get-docker/"
+    echo "2. Install PostgreSQL locally: sudo apt install postgresql"
+    echo "3. Backend will use in-memory storage (temporary)"
+    echo ""
+    echo "🔄 Starting backend with in-memory storage..."
     npm run dev:server
     exit 0
 fi
 
 # Check if PostgreSQL container is already running
 if docker ps | grep -q whooper-postgres; then
-    echo "✅ PostgreSQL already running"
+    echo "✅ PostgreSQL container already running"
 else
     # Check if container exists but is stopped
     if docker ps -a | grep -q whooper-postgres; then
@@ -28,7 +42,7 @@ else
         docker start whooper-postgres
     else
         echo "📦 Starting PostgreSQL container..."
-        docker-compose up -d postgres
+        docker-compose up -d postgres 2>&1 | grep -v "port is already allocated" || true
 
         # Wait for PostgreSQL to be ready
         echo "⏳ Waiting for PostgreSQL to be ready..."
@@ -38,7 +52,9 @@ else
             counter=$((counter + 1))
             if [ $counter -gt $timeout ]; then
                 echo "❌ PostgreSQL failed to start in time"
-                exit 1
+                echo "   Backend will use in-memory storage"
+                npm run dev:server
+                exit 0
             fi
             echo "   Waiting... ($counter/$timeout)"
             sleep 1
