@@ -10,11 +10,8 @@ import type { Role, BroadcastMessage } from '../types';
 // In-memory message store: channelId -> messages[]
 const messageStore: Map<string, any[]> = new Map();
 
-// In-memory user store
-const users: Map<number, any> = new Map([
-  [1, { id: 1, name: 'Demo User', email: 'demo@whooper.com', avatar: 'https://i.pravatar.cc/40?u=demo@whooper.com' }],
-  [2, { id: 2, name: 'Test User', email: 'test@whooper.com', avatar: 'https://i.pravatar.cc/40?u=test@whooper.com' }],
-]);
+// In-memory user store - starts empty, users are created on first message
+const users: Map<number, any> = new Map();
 
 let messageIdCounter = 1;
 
