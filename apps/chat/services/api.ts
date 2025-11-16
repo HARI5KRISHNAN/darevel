@@ -1,5 +1,5 @@
 // This file will centralize all API calls to the backend.
-import { Message, User } from '../types';
+import { Message, User, Role } from '../types';
 
 // Java Backend Microservices URLs
 const AUTH_API_URL = import.meta?.env?.VITE_AUTH_SERVICE_URL || 'http://localhost:8081';
@@ -9,6 +9,24 @@ const PERMISSIONS_API_URL = import.meta?.env?.VITE_PERMISSIONS_SERVICE_URL || 'h
 // Legacy fallback for old code
 const API_BASE_URL = CHAT_API_URL + '/api';
 
+// Transform backend MessageDto to frontend Message type
+export const transformBackendMessage = (backendMsg: any): Message => {
+    return {
+        id: backendMsg.id,
+        role: Role.USER, // All chat messages are from users
+        content: backendMsg.content,
+        timestamp: backendMsg.timestamp,
+        isRead: backendMsg.isRead,
+        channelId: backendMsg.channelId,
+        sender: {
+            id: backendMsg.userId,
+            name: backendMsg.userName || 'Unknown User',
+            email: backendMsg.userEmail || '',
+            avatar: backendMsg.userAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(backendMsg.userName || 'U')}&background=random`
+        }
+    } as Message;
+};
+
 export const getMessages = async (channelId: string): Promise<Message[]> => {
     const response = await fetch(`${API_BASE_URL}/chat/${channelId}/messages`);
     if (!response.ok) {
@@ -16,8 +34,9 @@ export const getMessages = async (channelId: string): Promise<Message[]> => {
         throw new Error(errorData.message || 'Failed to fetch messages');
     }
     const result = await response.json();
-    // Handle Java backend ApiResponse wrapper
-    return result.data || result;
+    // Handle Java backend ApiResponse wrapper and transform messages
+    const backendMessages = result.data || result;
+    return backendMessages.map(transformBackendMessage);
 };
 
 export const sendMessage = async (channelId: string, content: string, userId: number): Promise<Message> => {
@@ -38,8 +57,9 @@ export const sendMessage = async (channelId: string, content: string, userId: nu
         throw new Error(errorData.message || 'Failed to send message');
     }
     const result = await response.json();
-    // Handle Java backend ApiResponse wrapper
-    return result.data || result;
+    // Handle Java backend ApiResponse wrapper and transform message
+    const backendMessage = result.data || result;
+    return transformBackendMessage(backendMessage);
 }
 
 export const generateSummary = async (transcript: string): Promise<{ summary: string }> => {

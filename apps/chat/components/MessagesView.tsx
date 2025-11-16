@@ -3,7 +3,7 @@ import MessageListItem from './MessageListItem';
 import { DirectConversation, Role, Message, User } from '../types';
 import ConversationView from './ConversationView';
 import { DoubleArrowLeftIcon, DoubleArrowRightIcon, SearchIcon } from './icons';
-import { generateSummary as apiGenerateSummary, sendMessage as apiSendMessage, getMessages as apiGetMessages } from '../services/api';
+import { generateSummary as apiGenerateSummary, sendMessage as apiSendMessage, getMessages as apiGetMessages, transformBackendMessage } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { Message } from '../types';
+import { transformBackendMessage } from '../services/api';
 
 interface UseWebSocketProps {
     channelId: string | null;
@@ -41,8 +42,10 @@ export const useWebSocket = ({ channelId, onMessageReceived }: UseWebSocketProps
                     (message) => {
                         console.log('📩 Received WebSocket message:', message.body);
                         try {
-                            const parsedMessage: Message = JSON.parse(message.body);
-                            onMessageReceived(parsedMessage);
+                            const backendMessage = JSON.parse(message.body);
+                            // Transform backend message to frontend Message type
+                            const transformedMessage = transformBackendMessage(backendMessage);
+                            onMessageReceived(transformedMessage);
                         } catch (error) {
                             console.error('Error parsing message:', error);
                         }
