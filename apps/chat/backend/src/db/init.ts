@@ -98,9 +98,17 @@ export async function initializeDatabase(): Promise<boolean> {
       console.log('   Docker: docker run -d --name darevel-chat-postgres -e POSTGRES_USER=darevel_chat -e POSTGRES_PASSWORD=darevel_chat123 -e POSTGRES_DB=darevel_chat -p 5432:5432 postgres:15');
       console.log('   Or: Update DB credentials in .env file');
       console.log('');
-      console.log('🔄 Server will use in-memory storage instead');
+      console.log('❌ Server cannot start without PostgreSQL database');
+      console.log('');
+    } else if (error.message.includes('password authentication failed')) {
+      console.log('');
+      console.log('⚠️  PostgreSQL authentication failed. Run this SQL to create the user:');
+      console.log('   sudo -u postgres psql -c "CREATE USER darevel_chat WITH ENCRYPTED PASSWORD \'darevel_chat123\'; ALTER USER darevel_chat CREATEDB; CREATE DATABASE darevel_chat OWNER darevel_chat;"');
+      console.log('');
+      console.log('❌ Server cannot start without database access');
+      console.log('');
     }
 
-    return false;
+    throw new Error(`Database connection required. ${error.message}`);
   }
 }

@@ -87,7 +87,7 @@ export async function startPodMonitor(): Promise<void> {
     const coreApi = kc.makeApiClient(k8s.CoreV1Api);
     watch = new k8s.Watch(kc);
 
-    console.log('🚀 Whooper Pod Monitor started - watching for pod restarts...');
+    console.log('🚀 Darevel Chat Pod Monitor started - watching for pod restarts...');
 
     // Start watching all pods
     watchRequest = await watch.watch(
@@ -419,7 +419,7 @@ ${incident.healedAt ? `Healed: ${incident.healedAt.toLocaleString()}` : ''}
 ${incident.aiSummary || 'AI summary not available'}
 
 ---
-This incident was automatically detected and reported by Whooper Auto-Healing System.
+This incident was automatically detected and reported by Darevel Chat Auto-Healing System.
     `.trim();
 
     // HTML content
@@ -556,7 +556,7 @@ ${incident.message}
           <tr>
             <td style="padding: 20px; text-align: center; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
               <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 12px;">
-                This incident was automatically detected and reported by Whooper Auto-Healing System
+                This incident was automatically detected and reported by Darevel Chat Auto-Healing System
               </p>
               <p style="margin: 0; font-size: 12px;">
                 <a href="#" style="color: #3b82f6; text-decoration: none; margin: 0 10px;">View Pod Logs</a>

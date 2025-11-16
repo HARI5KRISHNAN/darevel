@@ -9,7 +9,6 @@ import { Server } from 'socket.io';
 import { startWatchingPods, getPods, stopWatchingPods } from './services/k8s.service';
 import { register, podMetrics, requestCounter, requestDuration } from './utils/metrics';
 import { startPodMonitor, stopPodMonitor, setSocketIO } from './services/podMonitor.service';
-import { connectDatabase, disconnectDatabase } from './config/database';
 
 declare global {
   namespace Express {
@@ -147,14 +146,7 @@ httpServer.listen(PORT, async () => {
 
   // Initialize PostgreSQL database (auto-setup tables)
   const { initializeDatabase } = await import('./db/init');
-  const dbInitialized = await initializeDatabase();
-
-  // Initialize database switcher (determines which controllers to use)
-  const { initializeDatabaseSwitch } = await import('./config/db-switch');
-  await initializeDatabaseSwitch();
-
-  // Initialize MongoDB connection (optional - for audit logs)
-  await connectDatabase();
+  await initializeDatabase();
 });
 
 // Initialize Kubernetes watcher (optional - server will run without it)
@@ -175,7 +167,6 @@ process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully...');
   stopWatchingPods();
   stopPodMonitor();
-  await disconnectDatabase();
   httpServer.close(() => {
     console.log('Server closed');
     process.exit(0);
