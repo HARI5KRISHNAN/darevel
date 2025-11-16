@@ -15,45 +15,31 @@ export const getMessages = async (channelId: string, userId: number): Promise<Me
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to fetch messages');
     }
-    return response.json();
+    const result = await response.json();
+    // Handle Java backend ApiResponse wrapper
+    return result.data || result;
 };
 
 export const sendMessage = async (channelId: string, content: string, userId: number): Promise<Message> => {
-    // Get user info from localStorage to send with message
-    const savedUser = localStorage.getItem('whooper_user');
-    let userName = `User ${userId}`;
-    let userEmail = `user${userId}@whooper.com`;
-    let userAvatar = `https://i.pravatar.cc/80?u=user${userId}`;
-
-    if (savedUser) {
-        try {
-            const user = JSON.parse(savedUser);
-            userName = user.name || userName;
-            userEmail = user.email || userEmail;
-            userAvatar = user.avatar || userAvatar;
-        } catch (e) {
-            console.error('Failed to parse user from localStorage');
-        }
-    }
-
+    // Java backend only needs userId and content
+    // It will fetch user details from Auth Service automatically
     const response = await fetch(`${API_BASE_URL}/chat/${channelId}/messages`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            content,
             userId,
-            userName,
-            userEmail,
-            userAvatar
+            content
         }),
     });
      if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to send message');
     }
-    return response.json();
+    const result = await response.json();
+    // Handle Java backend ApiResponse wrapper
+    return result.data || result;
 }
 
 export const generateSummary = async (transcript: string): Promise<{ summary: string }> => {
