@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken } from '../middleware/authMiddleware.js';
+
 import { pool } from '../services/dbService.js';
 import { generateRecordingUrl } from '../services/recordingService.js';
 
@@ -9,7 +9,7 @@ const router = express.Router();
  * POST /api/mail/calendar/meetings
  * Create a new meeting
  */
-router.post('/calendar/meetings', authenticateToken, async (req, res) => {
+router.post('/calendar/meetings', async (req, res) => {
   try {
     const { title, description, scheduled_at, duration, room_name } = req.body;
 
@@ -47,7 +47,7 @@ router.post('/calendar/meetings', authenticateToken, async (req, res) => {
  * GET /api/mail/calendar/meetings
  * Get all meetings for the authenticated user
  */
-router.get('/calendar/meetings', authenticateToken, async (req, res) => {
+router.get('/calendar/meetings', async (req, res) => {
   try {
     const userEmail = req.kauth?.grant?.access_token?.content?.email ||
                      req.kauth?.grant?.access_token?.content?.preferred_username;
@@ -74,7 +74,7 @@ router.get('/calendar/meetings', authenticateToken, async (req, res) => {
  * GET /api/mail/calendar/meetings/:id
  * Get a specific meeting by ID
  */
-router.get('/calendar/meetings/:id', authenticateToken, async (req, res) => {
+router.get('/calendar/meetings/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const userEmail = req.kauth?.grant?.access_token?.content?.email ||
@@ -104,7 +104,7 @@ router.get('/calendar/meetings/:id', authenticateToken, async (req, res) => {
  * PATCH /api/mail/calendar/meetings/:id
  * Update a meeting
  */
-router.patch('/calendar/meetings/:id', authenticateToken, async (req, res) => {
+router.patch('/calendar/meetings/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, scheduled_at, duration, status, recording_url } = req.body;
@@ -182,7 +182,7 @@ router.patch('/calendar/meetings/:id', authenticateToken, async (req, res) => {
  * DELETE /api/mail/calendar/meetings/:id
  * Delete a meeting
  */
-router.delete('/calendar/meetings/:id', authenticateToken, async (req, res) => {
+router.delete('/calendar/meetings/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const userEmail = req.kauth?.grant?.access_token?.content?.email ||
@@ -213,7 +213,7 @@ router.delete('/calendar/meetings/:id', authenticateToken, async (req, res) => {
  * POST /api/mail/calendar/meetings/:id/join
  * Mark a meeting as in_progress when user joins
  */
-router.post('/calendar/meetings/:id/join', authenticateToken, async (req, res) => {
+router.post('/calendar/meetings/:id/join', async (req, res) => {
   try {
     const { id } = req.params;
     const userEmail = req.kauth?.grant?.access_token?.content?.email ||
@@ -247,7 +247,7 @@ router.post('/calendar/meetings/:id/join', authenticateToken, async (req, res) =
  * POST /api/mail/calendar/meetings/:id/end
  * End a meeting and generate recording URL
  */
-router.post('/calendar/meetings/:id/end', authenticateToken, async (req, res) => {
+router.post('/calendar/meetings/:id/end', async (req, res) => {
   try {
     const { id } = req.params;
     const userEmail = req.kauth?.grant?.access_token?.content?.email ||
@@ -291,7 +291,7 @@ router.post('/calendar/meetings/:id/end', authenticateToken, async (req, res) =>
  * PATCH /api/mail/calendar/meetings/:id/recording
  * Update recording URL for a meeting
  */
-router.patch('/calendar/meetings/:id/recording', authenticateToken, async (req, res) => {
+router.patch('/calendar/meetings/:id/recording', async (req, res) => {
   try {
     const { id } = req.params;
     const { recording_url } = req.body;

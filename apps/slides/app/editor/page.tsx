@@ -5,12 +5,8 @@ import SlideCanvas from "@/components/slide-canvas"
 import SlidesPanel from "@/components/slides-panel"
 import PropertiesPanel from "@/components/properties-panel"
 import EditorTopbar from "@/components/editor-topbar"
-import MultiCursor from "@/components/multi-cursor"
-import CollaboratorsPanel from "@/components/collaborators-panel"
 import { useEditorStore } from "@/lib/store"
 import { useKeyboardShortcuts } from "@/lib/hooks/use-keyboard-shortcuts"
-import { useCollaboration } from "@/lib/hooks/use-collaboration"
-import { useSupabaseSync } from "@/lib/hooks/use-supabase-sync"
 import type { Template } from "@/lib/templates"
 
 export default function EditorPage() {
@@ -30,61 +26,7 @@ export default function EditorPage() {
   // Enable keyboard shortcuts
   useKeyboardShortcuts()
 
-  // Enable Supabase auto-sync
-  useSupabaseSync()
-
-  // Initialize collaboration
-  const {
-    collaborators,
-    currentUser,
-    isConnected,
-    updateCursorPosition,
-    updateCurrentSlide,
-    cleanup,
-  } = useCollaboration({
-    presentationId: presentation.id,
-  })
-
   const selectedSlide = presentation.slides.find((s) => s.id === selectedSlideId)
-
-  // Update current slide in collaboration
-  useEffect(() => {
-    if (selectedSlideId && presentation.slides.length > 0) {
-      const slideIndex = presentation.slides.findIndex((s) => s.id === selectedSlideId)
-      if (slideIndex !== -1) {
-        updateCurrentSlide(slideIndex)
-      }
-    }
-  }, [selectedSlideId, presentation.slides])
-
-  // Track mouse movement for cursor position
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      updateCursorPosition({
-        x: e.clientX,
-        y: e.clientY,
-      })
-    },
-    [updateCursorPosition]
-  )
-
-  useEffect(() => {
-    // Throttle mouse updates to every 100ms
-    let lastUpdate = 0
-    const throttledMouseMove = (e: MouseEvent) => {
-      const now = Date.now()
-      if (now - lastUpdate > 100) {
-        handleMouseMove(e)
-        lastUpdate = now
-      }
-    }
-
-    window.addEventListener("mousemove", throttledMouseMove)
-    return () => {
-      window.removeEventListener("mousemove", throttledMouseMove)
-      cleanup()
-    }
-  }, [handleMouseMove, cleanup])
 
   const handleApplyTemplate = (template: Template, allSlides: boolean) => {
     if (allSlides) {
@@ -113,9 +55,6 @@ export default function EditorPage() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      {/* Multi-cursor overlay */}
-      <MultiCursor collaborators={collaborators} />
-
       <EditorTopbar
         presentationTitle={presentation.title}
         onAIAssist={() => {
@@ -123,12 +62,6 @@ export default function EditorPage() {
           console.log("AI Assist clicked")
         }}
       >
-        {/* Collaborators panel in topbar */}
-        <CollaboratorsPanel
-          collaborators={collaborators}
-          currentUserEmail={currentUser?.email || ""}
-          isConnected={isConnected}
-        />
       </EditorTopbar>
 
       <div className="flex flex-1 overflow-hidden gap-4 p-4">

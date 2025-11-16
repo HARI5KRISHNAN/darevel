@@ -13,7 +13,6 @@
     "axios": "^1.13.1",
     "cron": "^4.3.3",
     "imap-simple": "^5.1.0",
-    "keycloak-js": "^26.2.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

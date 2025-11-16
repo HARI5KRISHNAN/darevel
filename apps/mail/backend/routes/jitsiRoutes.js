@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken } from '../middleware/authMiddleware.js';
+
 import { generateJitsiToken } from '../services/jitsiService.js';
 
 const router = express.Router();
@@ -22,7 +22,7 @@ function getUser(req) {
  * Get a JWT token for joining Jitsi meetings
  * Requires Keycloak authentication
  */
-router.get('/jitsi/token', authenticateToken, (req, res) => {
+router.get('/jitsi/token', (req, res) => {
   try {
     const user = getUser(req);
     const roomName = req.query.room || '*'; // Optional room name from query param
@@ -63,7 +63,7 @@ router.get('/jitsi/token', authenticateToken, (req, res) => {
  * Generate token for a specific room
  * Request body: { roomName: 'abc123' }
  */
-router.post('/jitsi/token', authenticateToken, (req, res) => {
+router.post('/jitsi/token', (req, res) => {
   try {
     const user = getUser(req);
     const { roomName } = req.body;
