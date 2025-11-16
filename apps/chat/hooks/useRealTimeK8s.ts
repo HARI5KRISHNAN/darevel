@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { Pod, PodUpdateEvent } from '../types';
 
-// Point to your backend service
-const SOCKET_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+// NOTE: The Java backend uses Spring WebSocket, not Socket.IO
+// This hook is disabled until WebSocket is properly migrated
+const SOCKET_URL = import.meta.env.VITE_WEBSOCKET_URL || 'http://localhost:8082';
 
 export const useRealTimeK8s = () => {
   const [pods, setPods] = useState<Pod[]>([]);
@@ -33,6 +34,15 @@ export const useRealTimeK8s = () => {
   }, []);
 
   useEffect(() => {
+    // TODO: Migrate to Spring WebSocket (SockJS/STOMP)
+    // The Java backend doesn't support Socket.IO
+    // For now, disable real-time updates
+    console.warn('Kubernetes real-time updates disabled - Socket.IO not available in Java backend');
+    setConnectionStatus('disconnected');
+    setLoading(false);
+    return; // Disable WebSocket connection for now
+
+    /* Socket.IO code disabled
     const socket: Socket = io(SOCKET_URL, {
       reconnection: true,
       reconnectionDelay: 1000,
@@ -76,6 +86,7 @@ export const useRealTimeK8s = () => {
     return () => {
       socket.disconnect();
     };
+    */
   }, [processUpdate]);
 
   return { pods, connectionStatus, lastUpdate };

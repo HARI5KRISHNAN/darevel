@@ -1,8 +1,13 @@
 // This file will centralize all API calls to the backend.
 import { Message, User } from '../types';
 
-// Prefer explicit backend URL from env; fall back to localhost backend
-const API_BASE_URL = import.meta?.env?.VITE_BACKEND_URL || 'http://localhost:5001/api';
+// Java Backend Microservices URLs
+const AUTH_API_URL = import.meta?.env?.VITE_AUTH_SERVICE_URL || 'http://localhost:8081';
+const CHAT_API_URL = import.meta?.env?.VITE_CHAT_SERVICE_URL || 'http://localhost:8082';
+const PERMISSIONS_API_URL = import.meta?.env?.VITE_PERMISSIONS_SERVICE_URL || 'http://localhost:8083';
+
+// Legacy fallback for old code
+const API_BASE_URL = CHAT_API_URL + '/api';
 
 export const getMessages = async (channelId: string, userId: number): Promise<Message[]> => {
     const response = await fetch(`${API_BASE_URL}/chat/${channelId}/messages?userId=${userId}`);
@@ -87,7 +92,7 @@ interface AuthResponse {
 
 // FIX: Added missing loginUser function.
 export const loginUser = async (email: string, password: string): Promise<AuthResponse> => {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    const response = await fetch(`${AUTH_API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -98,12 +103,14 @@ export const loginUser = async (email: string, password: string): Promise<AuthRe
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to login');
     }
-    return response.json();
+    const result = await response.json();
+    // Handle Java backend ApiResponse wrapper
+    return result.data || result;
 };
 
 // FIX: Added missing registerUser function.
 export const registerUser = async (name: string, email: string, password: string): Promise<AuthResponse> => {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    const response = await fetch(`${AUTH_API_URL}/api/auth/register`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -114,7 +121,9 @@ export const registerUser = async (name: string, email: string, password: string
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to register');
     }
-    return response.json();
+    const result = await response.json();
+    // Handle Java backend ApiResponse wrapper
+    return result.data || result;
 };
 // ==========================
 // 🧠 PERMISSION MANAGEMENT API
@@ -129,22 +138,24 @@ interface Permission {
 
 // ✅ Get all permissions
 export const getPermissions = async (): Promise<Permission[]> => {
-  const response = await fetch(`${API_BASE_URL}/permissions`, {
+  const response = await fetch(`${PERMISSIONS_API_URL}/api/permissions`, {
     method: "GET",
   });
   if (!response.ok) throw new Error("Failed to fetch permissions");
-  return response.json();
+  const result = await response.json();
+  return result.data || result;
 };
 
 // ✅ Create a new permission
 export const createPermission = async (permission: Permission): Promise<Permission> => {
-  const response = await fetch(`${API_BASE_URL}/permissions`, {
+  const response = await fetch(`${PERMISSIONS_API_URL}/api/permissions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(permission),
   });
   if (!response.ok) throw new Error("Failed to create permission");
-  return response.json();
+  const result = await response.json();
+  return result.data || result;
 };
 
 // ✅ Update existing permission
@@ -152,18 +163,19 @@ export const updatePermission = async (
   id: string,
   updates: Partial<Permission>
 ): Promise<Permission> => {
-  const response = await fetch(`${API_BASE_URL}/permissions/${id}`, {
+  const response = await fetch(`${PERMISSIONS_API_URL}/api/permissions/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(updates),
   });
   if (!response.ok) throw new Error("Failed to update permission");
-  return response.json();
+  const result = await response.json();
+  return result.data || result;
 };
 
 // ✅ Delete permission
 export const deletePermission = async (id: string): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/permissions/${id}`, {
+  const response = await fetch(`${PERMISSIONS_API_URL}/api/permissions/${id}`, {
     method: "DELETE",
   });
   if (!response.ok) throw new Error("Failed to delete permission");
