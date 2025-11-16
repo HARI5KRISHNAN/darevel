@@ -32,7 +32,14 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
 
     // Setup Socket.IO connection for real-time messaging
     useEffect(() => {
-        const SOCKET_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+        // TODO: Migrate to Spring WebSocket (SockJS/STOMP)
+        // The Java backend doesn't support Socket.IO
+        console.warn('Real-time messaging disabled - Socket.IO not available in Java backend');
+        // Disable Socket.IO for now
+        return;
+
+        /* Socket.IO code disabled
+        const SOCKET_URL = import.meta.env.VITE_WEBSOCKET_URL || 'http://localhost:8082';
         const socketInstance: Socket = io(SOCKET_URL);
 
         socketInstance.on('connect', () => {
@@ -68,6 +75,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
         return () => {
             socketInstance.disconnect();
         };
+        */
     }, []);
 
     // Join/leave channels when conversation changes
@@ -89,14 +97,18 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
 
     const fetchRegisteredUsers = async () => {
         try {
-            const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-            const response = await fetch(`${BACKEND_URL}/api/auth/users`);
+            // Use Auth Service to fetch users (port 8081)
+            const AUTH_API_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:8081';
+            const response = await fetch(`${AUTH_API_URL}/api/auth/users`);
             const data = await response.json();
+            // Handle Java backend ApiResponse wrapper: data.data or data
+            const users = data.data || data;
             // Filter out current user
-            const otherUsers = data.users.filter((u: User) => u.id !== user?.id);
+            const otherUsers = Array.isArray(users) ? users.filter((u: User) => u.id !== user?.id) : [];
             setAvailableUsers(otherUsers);
         } catch (error) {
             console.error('Error fetching users:', error);
+            setAvailableUsers([]);
         }
     };
 
