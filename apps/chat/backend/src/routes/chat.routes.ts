@@ -1,5 +1,5 @@
 import express from 'express';
-import { getMessages, sendMessage } from '../controllers/chat.controller';
+import { getMessages, sendMessage } from '../controllers/chat.controller.inmemory';
 
 const router = express.Router();
 

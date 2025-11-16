@@ -56,8 +56,6 @@ let watchRequest: any = null;
 let isMonitoring = false;
 let io: SocketIOServer | null = null;
 let k8sAvailable = true; // Track if K8s is available
-let retryCount = 0;
-const MAX_RETRIES = 3; // Stop retrying after 3 attempts
 
 /**
  * Set Socket.IO instance for real-time updates
@@ -76,9 +74,9 @@ export async function startPodMonitor(): Promise<void> {
     return;
   }
 
-  // If K8s is not available and we've tried multiple times, skip
-  if (!k8sAvailable && retryCount >= MAX_RETRIES) {
-    console.log('⏭️  Skipping pod monitor - Kubernetes not available (tested ' + retryCount + ' times)');
+  // If K8s was already marked as unavailable, skip
+  if (!k8sAvailable) {
+    console.log('⏭️  Skipping pod monitor - Kubernetes not available');
     return;
   }
 
@@ -101,51 +99,33 @@ export async function startPodMonitor(): Promise<void> {
       (err) => {
         if (err) {
           console.error('❌ Pod watch error:', err.message);
-          isMonitoring = false;
-          retryCount++;
 
-          // Only retry if we haven't exceeded max retries
-          if (retryCount < MAX_RETRIES) {
-            console.log(`Retrying pod monitor in 10 seconds... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
-            setTimeout(() => {
-              startPodMonitor();
-            }, 10000);
-          } else {
-            k8sAvailable = false;
-            console.log('⚠️  Kubernetes unavailable - pod monitoring disabled');
-            console.log('💡 Server will continue without Kubernetes integration');
+          // Abort the watch to prevent repeated error callbacks
+          if (watchRequest) {
+            try {
+              watchRequest.abort();
+            } catch (e) {
+              // Ignore abort errors
+            }
+            watchRequest = null;
           }
+
+          isMonitoring = false;
+          k8sAvailable = false;
+          console.log('⚠️  Kubernetes watch failed - pod monitoring disabled');
+          console.log('💡 Server will continue without Kubernetes integration');
         }
       }
     );
 
     isMonitoring = true;
     k8sAvailable = true;
-    retryCount = 0; // Reset retry count on success
   } catch (error: any) {
     console.error('Failed to start pod monitor:', error.message);
     isMonitoring = false;
-    retryCount++;
-
-    // Check if this is a K8s unavailable error (ENOENT)
-    if (error.code === 'ENOENT' || error.message.includes('ENOENT')) {
-      k8sAvailable = false;
-      console.log('⚠️  Kubernetes config not found - pod monitoring disabled');
-      console.log('💡 Server will continue without Kubernetes integration');
-      return; // Don't retry for ENOENT errors
-    }
-
-    // Only retry if we haven't exceeded max retries
-    if (retryCount < MAX_RETRIES) {
-      console.log(`Retrying pod monitor startup in 30 seconds... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
-      setTimeout(() => {
-        startPodMonitor();
-      }, 30000);
-    } else {
-      k8sAvailable = false;
-      console.log('⚠️  Kubernetes unavailable after ' + MAX_RETRIES + ' attempts - pod monitoring disabled');
-      console.log('💡 Server will continue without Kubernetes integration');
-    }
+    k8sAvailable = false;
+    console.log('⚠️  Kubernetes not available - pod monitoring disabled');
+    console.log('💡 Server will continue without Kubernetes integration');
   }
 }
 
