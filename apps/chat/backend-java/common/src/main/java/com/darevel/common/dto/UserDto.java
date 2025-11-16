@@ -1,4 +1,4 @@
-package com.darevel.auth.dto;
+package com.darevel.common.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

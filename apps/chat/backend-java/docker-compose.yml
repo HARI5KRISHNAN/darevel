@@ -91,6 +91,22 @@ services:
       # Mount Ansible playbooks if needed
       - ./ansible:/app/src/ansible:ro
 
+  # Nginx API Gateway
+  nginx:
+    image: nginx:alpine
+    container_name: darevel-nginx-gateway
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth-service
+      - chat-service
+      - permissions-service
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
   # Prometheus (Optional - for metrics monitoring)
   prometheus:
     image: prom/prometheus:latest

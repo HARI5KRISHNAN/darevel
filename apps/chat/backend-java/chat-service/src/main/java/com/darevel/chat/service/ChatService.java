@@ -1,6 +1,6 @@
 package com.darevel.chat.service;
 
-import com.darevel.auth.dto.UserDto;
+import com.darevel.common.dto.UserDto;
 import com.darevel.chat.dto.MessageDto;
 import com.darevel.chat.dto.SendMessageRequest;
 import com.darevel.chat.model.Message;

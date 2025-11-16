@@ -19,6 +19,11 @@
         <module>chat-service</module>
         <module>permissions-service</module>
     </modules>
+    <!-- TODO: Add new services when implementations are complete
+        <module>ai-service</module>
+        <module>k8s-service</module>
+        <module>drive-service</module>
+    -->
 
     <properties>
         <java.version>17</java.version>
@@ -64,6 +69,13 @@
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
                     <version>${spring.boot.version}</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                     <configuration>
                         <excludes>
                             <exclude>

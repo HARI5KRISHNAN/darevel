@@ -3,7 +3,7 @@ package com.darevel.auth.service;
 import com.darevel.auth.dto.AuthResponse;
 import com.darevel.auth.dto.LoginRequest;
 import com.darevel.auth.dto.RegisterRequest;
-import com.darevel.auth.dto.UserDto;
+import com.darevel.common.dto.UserDto;
 import com.darevel.auth.model.User;
 import com.darevel.auth.repository.UserRepository;
 import com.darevel.common.util.JwtUtil;

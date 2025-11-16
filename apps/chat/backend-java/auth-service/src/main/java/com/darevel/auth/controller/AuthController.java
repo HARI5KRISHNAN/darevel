@@ -3,7 +3,7 @@ package com.darevel.auth.controller;
 import com.darevel.auth.dto.AuthResponse;
 import com.darevel.auth.dto.LoginRequest;
 import com.darevel.auth.dto.RegisterRequest;
-import com.darevel.auth.dto.UserDto;
+import com.darevel.common.dto.UserDto;
 import com.darevel.auth.service.AuthService;
 import com.darevel.common.dto.ApiResponse;
 import jakarta.validation.Valid;
