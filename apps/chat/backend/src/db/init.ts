@@ -51,7 +51,9 @@ export async function initializeDatabase(): Promise<boolean> {
     const pool = new Pool(dbConfig);
 
     console.log('📋 Running database migrations...');
-    const schemaPath = path.resolve(__dirname, 'schema.sql');
+    // Use path relative to project root for ts-node-dev compatibility
+    const schemaPath = path.join(process.cwd(), 'src', 'db', 'schema.sql');
+    console.log(`Reading schema from: ${schemaPath}`);
     const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
 
     await pool.query(schemaSql);
