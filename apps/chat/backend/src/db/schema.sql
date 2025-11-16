@@ -26,5 +26,5 @@ CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
 -- Grant permissions
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO whooper;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO whooper;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO darevel_chat;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO darevel_chat;
