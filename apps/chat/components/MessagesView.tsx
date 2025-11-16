@@ -7,7 +7,18 @@ import { generateSummary as apiGenerateSummary, sendMessage as apiSendMessage, g
 import { io, Socket } from 'socket.io-client';
 
 
-export const dummyConversations: DirectConversation[] = [];
+// Default conversations (channels)
+export const dummyConversations: DirectConversation[] = [
+    {
+        id: 'general',
+        name: 'General Channel',
+        avatar: 'https://ui-avatars.com/api/?name=General&background=4f46e5&color=fff',
+        lastMessage: 'Welcome to the general channel',
+        timestamp: 'now',
+        online: true,
+        messages: []
+    }
+];
 
 interface MessagesViewProps {
     user: User | null;
@@ -95,6 +106,42 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
         }
     }, [selectedConversationId, socket]);
 
+    // Fetch messages when conversation is selected and poll for updates
+    useEffect(() => {
+        if (!selectedConversationId) return;
+
+        const fetchMessages = async () => {
+            try {
+                const messages = await apiGetMessages(selectedConversationId);
+
+                // Update the conversation with fetched messages
+                setConversations(prev => prev.map(convo => {
+                    if (convo.id === selectedConversationId) {
+                        return {
+                            ...convo,
+                            messages: messages
+                        };
+                    }
+                    return convo;
+                }));
+
+                console.log(`✓ Loaded ${messages.length} messages for ${selectedConversationId}`);
+            } catch (error) {
+                console.error('Error fetching messages:', error);
+            }
+        };
+
+        // Initial fetch
+        fetchMessages();
+
+        // Poll for new messages every 3 seconds (since Socket.IO is disabled)
+        const pollInterval = setInterval(fetchMessages, 3000);
+
+        return () => {
+            clearInterval(pollInterval);
+        };
+    }, [selectedConversationId]);
+
     const fetchRegisteredUsers = async () => {
         try {
             // Use Auth Service to fetch users (port 8081)
@@ -168,7 +215,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
             setConversations(prevConvos => {
                 return prevConvos.map(convo => {
                     if (convo.id === selectedConversationId) {
-                        // Check if message already exists (from Socket.IO)
+                        // Check if message already exists (from polling or previous send)
                         const exists = convo.messages.some(m => m.id === sentMessage.id);
                         if (exists) return convo;
 

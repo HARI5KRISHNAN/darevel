@@ -9,8 +9,8 @@ const PERMISSIONS_API_URL = import.meta?.env?.VITE_PERMISSIONS_SERVICE_URL || 'h
 // Legacy fallback for old code
 const API_BASE_URL = CHAT_API_URL + '/api';
 
-export const getMessages = async (channelId: string, userId: number): Promise<Message[]> => {
-    const response = await fetch(`${API_BASE_URL}/chat/${channelId}/messages?userId=${userId}`);
+export const getMessages = async (channelId: string): Promise<Message[]> => {
+    const response = await fetch(`${API_BASE_URL}/chat/${channelId}/messages`);
     if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to fetch messages');
