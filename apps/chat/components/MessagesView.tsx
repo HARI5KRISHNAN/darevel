@@ -6,57 +6,7 @@ import { DoubleArrowLeftIcon, DoubleArrowRightIcon, SearchIcon } from './icons';
 import { generateSummary as apiGenerateSummary } from '../services/api';
 
 
-export const dummyConversations: DirectConversation[] = [
-    { 
-        id: 'dm1', name: 'Patrick Newman', avatar: 'https://i.pravatar.cc/40?u=1', lastMessage: 'Hey, are we still on for the meeting?', timestamp: '2m ago', online: true, unreadCount: 2,
-        messages: [
-            { id: 101, role: Role.MODEL, content: 'Hey there!', timestamp: new Date(Date.now() - 3 * 60 * 1000).toISOString() },
-            { id: 102, role: Role.USER, content: 'Hey, are we still on for the meeting?', timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString(), isRead: true }
-        ] 
-    },
-    { 
-        id: 'dm2', name: 'Yulia Polischuk', avatar: 'https://i.pravatar.cc/40?u=2', lastMessage: 'Just sent over the design files.', timestamp: '1h ago', online: false,
-        messages: [
-            { id: 201, role: Role.USER, content: 'Hey Yulia, could you send me the latest design files for the project?', timestamp: new Date(Date.now() - 65 * 60 * 1000).toISOString(), isRead: true },
-            { id: 202, role: Role.MODEL, content: 'Sure, I can do that. Which project are you referring to?', timestamp: new Date(Date.now() - 64 * 60 * 1000).toISOString() },
-            { id: 203, role: Role.USER, content: 'The "Whooper" redesign.', timestamp: new Date(Date.now() - 62 * 60 * 1000).toISOString(), isRead: true },
-            { id: 204, role: Role.MODEL, content: 'Got it. Just sent over the design files.', timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString() }
-        ] 
-    },
-    { 
-        id: 'dm3', name: 'Amanda Freeze', avatar: 'https://i.pravatar.cc/40?u=3', lastMessage: 'Can you review my pull request?', timestamp: '3h ago', online: true, unreadCount: 5,
-        messages: [
-             { id: 301, role: Role.USER, content: 'Can you review my pull request?', timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), isRead: true }
-        ] 
-    },
-    { 
-        id: 'dm4', name: 'Anatoly Belik', avatar: 'https://i.pravatar.cc/40?u=4', lastMessage: 'Let\'s catch up later this week.', timestamp: 'yesterday', online: false,
-        messages: [
-            { id: 401, role: Role.MODEL, content: 'Let\'s catch up later this week.', timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() }
-        ] 
-    },
-    { 
-        id: 'dm5', name: 'Jessica Koel', avatar: 'https://i.pravatar.cc/40?u=5', lastMessage: 'Great work on the presentation!', timestamp: 'yesterday', online: true,
-        messages: [
-            { id: 501, role: Role.MODEL, content: 'Great work on the presentation!', timestamp: new Date(Date.now() - 28 * 60 * 60 * 1000).toISOString() }
-        ]
-    },
-    { 
-        id: 'dm6', name: 'Kamil Boerger', avatar: 'https://i.pravatar.cc/40?u=6', lastMessage: 'See you at the company event.', timestamp: '2d ago', online: false,
-        messages: [
-             { id: 601, role: Role.MODEL, content: 'See you at the company event.', timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() }
-        ] 
-    },
-    { 
-        id: 'dm7', name: 'Tamara Shevchenko', avatar: 'https://i.pravatar.cc/40?u=7', lastMessage: 'The new feature is live!', timestamp: '3d ago', online: true,
-        messages: [
-            { id: 701, role: Role.MODEL, content: 'The new feature is live!', timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() }
-        ]
-    },
-    { id: 'dm8', name: 'Sam Nelson', avatar: 'https://i.pravatar.cc/40?u=8', lastMessage: 'Lunch today?', timestamp: '1w ago', online: false, messages: [{ id: 801, role: Role.USER, content: 'Lunch today?', timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), isRead: true }] },
-    { id: 'dm9', name: 'Jonas Berger', avatar: 'https://i.pravatar.cc/40?u=9', lastMessage: 'Thanks for your help with the bug.', timestamp: '1w ago', online: true, messages: [{ id: 901, role: Role.MODEL, content: 'No problem! Glad I could help.', timestamp: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString() }, { id: 902, role: Role.USER, content: 'Thanks for your help with the bug.', timestamp: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), isRead: true }] },
-    { id: 'dm10', name: 'Kristian Kurzawa', avatar: 'https://i.pravatar.cc/40?u=10', lastMessage: 'Welcome to the team!', timestamp: '2w ago', online: false, messages: [{ id: 1001, role: Role.MODEL, content: 'Welcome to the team!', timestamp: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString() }] },
-];
+export const dummyConversations: DirectConversation[] = [];
 
 interface MessagesViewProps {
     user: User | null;
@@ -66,7 +16,7 @@ interface MessagesViewProps {
 
 const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartCall }) => {
     const [conversations, setConversations] = useState<DirectConversation[]>(dummyConversations);
-    const [selectedConversationId, setSelectedConversationId] = useState<string | null>('dm2');
+    const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
