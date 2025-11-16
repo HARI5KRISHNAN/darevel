@@ -52,6 +52,9 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery }) => {
         return `dm-${smallerId}-${largerId}`;
     };
 
+    // Placeholder for sendSignalMessage - will be set by useWebSocket
+    const sendSignalRef = useRef<((message: any) => void) | null>(null);
+
     // WebRTC call hook
     const {
         callState,
@@ -65,11 +68,13 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery }) => {
         endCall,
         toggleMute,
         toggleVideo,
+        handleSignalingMessage,
     } = useWebRTCCall({
         user: user,
         onIncomingCall: (callData) => {
             setIncomingCall(callData);
         },
+        sendSignal: (message) => sendSignalRef.current?.(message),
     });
 
     // Attach streams to video elements when they change
@@ -170,11 +175,42 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery }) => {
         });
     }, []);
 
-    // Connect to WebSocket for real-time messages
-    useWebSocket({
+    // Handle incoming call signals
+    const handleCallSignal = useCallback((signal: any) => {
+        console.log('Received call signal in MessagesView:', signal);
+
+        if (signal.type === 'call-offer') {
+            // Find the caller user
+            const caller = availableUsers.find(u => u.id === signal.from);
+            const receiver = user!;
+
+            if (caller && signal.offer) {
+                setIncomingCall({
+                    type: signal.callType,
+                    caller,
+                    receiver,
+                    channelId: signal.channelId,
+                    offer: signal.offer,
+                });
+            }
+        }
+
+        // Forward all signals to WebRTC hook
+        handleSignalingMessage(signal);
+    }, [availableUsers, user, handleSignalingMessage]);
+
+    // Connect to WebSocket for real-time messages and call signaling
+    const { sendSignalMessage } = useWebSocket({
         channelId: selectedConversationId,
-        onMessageReceived: handleWebSocketMessage
+        onMessageReceived: handleWebSocketMessage,
+        user: user,
+        onCallSignal: handleCallSignal,
     });
+
+    // Update sendSignalRef when sendSignalMessage is available
+    useEffect(() => {
+        sendSignalRef.current = sendSignalMessage;
+    }, [sendSignalMessage]);
 
     // Fetch all registered users on mount
     useEffect(() => {
@@ -644,7 +680,14 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery }) => {
 
     // Handle rejecting an incoming call
     const handleRejectCall = () => {
-        endCall();
+        if (incomingCall && sendSignalRef.current) {
+            sendSignalRef.current({
+                type: 'call-rejected',
+                from: incomingCall.receiver.id,
+                to: incomingCall.caller.id,
+                channelId: incomingCall.channelId,
+            });
+        }
         setIncomingCall(null);
     };
 

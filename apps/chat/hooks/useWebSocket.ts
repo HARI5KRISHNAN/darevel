@@ -1,18 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import { Message } from '../types';
+import { Message, User } from '../types';
 import { transformBackendMessage } from '../services/api';
+import { SignalingMessage } from './useWebRTCCall';
 
 interface UseWebSocketProps {
     channelId: string | null;
     onMessageReceived: (message: Message) => void;
+    user?: User | null;
+    onCallSignal?: (signal: SignalingMessage) => void;
+    sendSignal?: (message: SignalingMessage) => void;
 }
 
-export const useWebSocket = ({ channelId, onMessageReceived }: UseWebSocketProps) => {
+export const useWebSocket = ({ channelId, onMessageReceived, user, onCallSignal }: UseWebSocketProps) => {
     const [isConnected, setIsConnected] = useState(false);
     const clientRef = useRef<Client | null>(null);
     const subscriptionRef = useRef<any>(null);
+    const callSubscriptionRef = useRef<any>(null);
 
     useEffect(() => {
         // WebSocket URL - using chat service on port 8082
@@ -53,6 +58,23 @@ export const useWebSocket = ({ channelId, onMessageReceived }: UseWebSocketProps
                 );
                 console.log(`Subscribed to /topic/messages/${channelId}`);
             }
+
+            // Subscribe to call signaling for this user
+            if (user && onCallSignal && client.connected) {
+                callSubscriptionRef.current = client.subscribe(
+                    `/topic/call-signal/${user.id}`,
+                    (message) => {
+                        console.log('📞 Received call signal:', message.body);
+                        try {
+                            const signal: SignalingMessage = JSON.parse(message.body);
+                            onCallSignal(signal);
+                        } catch (error) {
+                            console.error('Error parsing call signal:', error);
+                        }
+                    }
+                );
+                console.log(`Subscribed to /topic/call-signal/${user.id}`);
+            }
         };
 
         // On disconnect
@@ -77,12 +99,29 @@ export const useWebSocket = ({ channelId, onMessageReceived }: UseWebSocketProps
                 subscriptionRef.current.unsubscribe();
                 console.log(`Unsubscribed from /topic/messages/${channelId}`);
             }
+            if (callSubscriptionRef.current) {
+                callSubscriptionRef.current.unsubscribe();
+                console.log(`Unsubscribed from /topic/call-signal/${user?.id}`);
+            }
             if (clientRef.current) {
                 clientRef.current.deactivate();
                 console.log('WebSocket client deactivated');
             }
         };
-    }, [channelId, onMessageReceived]);
+    }, [channelId, onMessageReceived, user, onCallSignal]);
 
-    return { isConnected };
+    // Send call signaling message
+    const sendSignalMessage = (message: SignalingMessage) => {
+        if (clientRef.current && clientRef.current.connected) {
+            clientRef.current.publish({
+                destination: `/app/call-signal/${message.to}`,
+                body: JSON.stringify(message),
+            });
+            console.log('📤 Sent call signal:', message);
+        } else {
+            console.error('Cannot send call signal - WebSocket not connected');
+        }
+    };
+
+    return { isConnected, sendSignalMessage };
 };

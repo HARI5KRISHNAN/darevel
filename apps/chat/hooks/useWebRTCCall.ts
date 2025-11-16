@@ -4,7 +4,21 @@ import { User } from '../types';
 export type CallType = 'audio' | 'video';
 export type CallState = 'idle' | 'calling' | 'ringing' | 'connected' | 'ended';
 
-interface CallData {
+// Call signaling message types
+export type SignalingMessageType = 'call-offer' | 'call-answer' | 'ice-candidate' | 'call-rejected' | 'call-ended';
+
+export interface SignalingMessage {
+    type: SignalingMessageType;
+    from: number; // User ID
+    to: number; // User ID
+    channelId: string;
+    callType?: CallType;
+    offer?: RTCSessionDescriptionInit;
+    answer?: RTCSessionDescriptionInit;
+    candidate?: RTCIceCandidateInit;
+}
+
+export interface CallData {
     type: CallType;
     caller: User;
     receiver: User;
@@ -14,12 +28,10 @@ interface CallData {
 interface UseWebRTCCallProps {
     user: User | null;
     onIncomingCall?: (callData: CallData) => void;
+    sendSignal?: (message: SignalingMessage) => void;
 }
 
-export const useWebRTCCall = ({ user, onIncomingCall }: UseWebRTCCallProps) => {
-    // TODO: Use onIncomingCall when WebSocket signaling is implemented
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const handleIncomingCall = onIncomingCall;
+export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCallProps) => {
     const [callState, setCallState] = useState<CallState>('idle');
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -40,14 +52,20 @@ export const useWebRTCCall = ({ user, onIncomingCall }: UseWebRTCCallProps) => {
     };
 
     // Initialize peer connection
-    const initializePeerConnection = useCallback(() => {
+    const initializePeerConnection = useCallback((receiver: User) => {
         const pc = new RTCPeerConnection(iceServers);
 
         // Handle ICE candidates
         pc.onicecandidate = (event) => {
-            if (event.candidate) {
-                console.log('ICE candidate:', event.candidate);
-                // TODO: Send ICE candidate to peer via WebSocket
+            if (event.candidate && sendSignal && currentCall) {
+                console.log('Sending ICE candidate:', event.candidate);
+                sendSignal({
+                    type: 'ice-candidate',
+                    from: user!.id,
+                    to: receiver.id,
+                    channelId: currentCall.channelId,
+                    candidate: event.candidate.toJSON(),
+                });
             }
         };
 
@@ -73,7 +91,7 @@ export const useWebRTCCall = ({ user, onIncomingCall }: UseWebRTCCallProps) => {
 
         peerConnection.current = pc;
         return pc;
-    }, []);
+    }, [sendSignal, currentCall, user]);
 
     // Start a call
     const startCall = useCallback(async (
@@ -104,7 +122,7 @@ export const useWebRTCCall = ({ user, onIncomingCall }: UseWebRTCCallProps) => {
             }
 
             // Initialize peer connection
-            const pc = initializePeerConnection();
+            const pc = initializePeerConnection(receiver);
 
             // Add local tracks to peer connection
             stream.getTracks().forEach((track) => {
@@ -115,15 +133,25 @@ export const useWebRTCCall = ({ user, onIncomingCall }: UseWebRTCCallProps) => {
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
 
-            console.log('Call started:', { receiver, callType, offer });
-            // TODO: Send offer to receiver via WebSocket
+            // Send offer to receiver via WebSocket
+            if (sendSignal) {
+                sendSignal({
+                    type: 'call-offer',
+                    from: user.id,
+                    to: receiver.id,
+                    channelId,
+                    callType,
+                    offer,
+                });
+                console.log('Call offer sent:', { receiver, callType });
+            }
 
         } catch (error) {
             console.error('Error starting call:', error);
             alert('Failed to start call. Please check camera/microphone permissions.');
             endCall();
         }
-    }, [user, initializePeerConnection]);
+    }, [user, initializePeerConnection, sendSignal]);
 
     // Answer an incoming call
     const answerCall = useCallback(async (callData: CallData, offer: RTCSessionDescriptionInit) => {
@@ -143,7 +171,7 @@ export const useWebRTCCall = ({ user, onIncomingCall }: UseWebRTCCallProps) => {
             }
 
             // Initialize peer connection
-            const pc = initializePeerConnection();
+            const pc = initializePeerConnection(callData.caller);
 
             // Add local tracks
             stream.getTracks().forEach((track) => {
@@ -157,25 +185,54 @@ export const useWebRTCCall = ({ user, onIncomingCall }: UseWebRTCCallProps) => {
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
 
-            console.log('Call answered:', { callData, answer });
-            // TODO: Send answer to caller via WebSocket
+            // Send answer to caller via WebSocket
+            if (sendSignal) {
+                sendSignal({
+                    type: 'call-answer',
+                    from: callData.receiver.id,
+                    to: callData.caller.id,
+                    channelId: callData.channelId,
+                    answer,
+                });
+                console.log('Call answer sent:', { callData });
+            }
 
         } catch (error) {
             console.error('Error answering call:', error);
             alert('Failed to answer call. Please check camera/microphone permissions.');
             endCall();
         }
-    }, [initializePeerConnection]);
+    }, [initializePeerConnection, sendSignal]);
 
     // Reject an incoming call
-    const rejectCall = useCallback(() => {
+    const rejectCall = useCallback((callData?: CallData) => {
+        if (callData && sendSignal) {
+            sendSignal({
+                type: 'call-rejected',
+                from: callData.receiver.id,
+                to: callData.caller.id,
+                channelId: callData.channelId,
+            });
+            console.log('Call rejected:', { callData });
+        }
         setCallState('idle');
         setCurrentCall(null);
-        // TODO: Send reject message via WebSocket
-    }, []);
+    }, [sendSignal]);
 
     // End the call
     const endCall = useCallback(() => {
+        // Send end call signal
+        if (currentCall && sendSignal && user) {
+            const otherUser = currentCall.caller.id === user.id ? currentCall.receiver : currentCall.caller;
+            sendSignal({
+                type: 'call-ended',
+                from: user.id,
+                to: otherUser.id,
+                channelId: currentCall.channelId,
+            });
+            console.log('Call ended signal sent');
+        }
+
         // Stop all tracks
         if (localStream) {
             localStream.getTracks().forEach((track) => track.stop());
@@ -209,8 +266,7 @@ export const useWebRTCCall = ({ user, onIncomingCall }: UseWebRTCCallProps) => {
         }, 1000);
 
         console.log('Call ended');
-        // TODO: Send end call message via WebSocket
-    }, [localStream]);
+    }, [localStream, currentCall, sendSignal, user]);
 
     // Toggle mute
     const toggleMute = useCallback(() => {
@@ -233,6 +289,56 @@ export const useWebRTCCall = ({ user, onIncomingCall }: UseWebRTCCallProps) => {
             }
         }
     }, [localStream]);
+
+    // Handle incoming signaling messages
+    const handleSignalingMessage = useCallback(async (message: SignalingMessage) => {
+        console.log('Received signaling message:', message);
+
+        switch (message.type) {
+            case 'call-offer':
+                // Notify about incoming call
+                if (onIncomingCall && message.offer) {
+                    // We need the full user objects - this will be handled in MessagesView
+                    // Just set the state to ringing
+                    setCallState('ringing');
+                }
+                break;
+
+            case 'call-answer':
+                // Receiver accepted the call - set their answer
+                if (message.answer && peerConnection.current) {
+                    await peerConnection.current.setRemoteDescription(
+                        new RTCSessionDescription(message.answer)
+                    );
+                    setCallState('connected');
+                    console.log('Call answer received and processed');
+                }
+                break;
+
+            case 'ice-candidate':
+                // Add ICE candidate from peer
+                if (message.candidate && peerConnection.current) {
+                    await peerConnection.current.addIceCandidate(
+                        new RTCIceCandidate(message.candidate)
+                    );
+                    console.log('ICE candidate added');
+                }
+                break;
+
+            case 'call-rejected':
+                // Call was rejected
+                console.log('Call rejected by receiver');
+                alert('Call was rejected');
+                endCall();
+                break;
+
+            case 'call-ended':
+                // Other user ended the call
+                console.log('Call ended by other user');
+                endCall();
+                break;
+        }
+    }, [onIncomingCall, endCall]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -261,5 +367,6 @@ export const useWebRTCCall = ({ user, onIncomingCall }: UseWebRTCCallProps) => {
         endCall,
         toggleMute,
         toggleVideo,
+        handleSignalingMessage,
     };
 };
