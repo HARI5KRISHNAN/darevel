@@ -3,7 +3,8 @@ import MessageListItem from './MessageListItem';
 import { DirectConversation, Role, Message, User } from '../types';
 import ConversationView from './ConversationView';
 import { DoubleArrowLeftIcon, DoubleArrowRightIcon, SearchIcon } from './icons';
-import { generateSummary as apiGenerateSummary } from '../services/api';
+import { generateSummary as apiGenerateSummary, sendMessage as apiSendMessage, getMessages as apiGetMessages } from '../services/api';
+import { io, Socket } from 'socket.io-client';
 
 
 export const dummyConversations: DirectConversation[] = [];
@@ -20,6 +21,64 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+    const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+    const [showUserList, setShowUserList] = useState(false);
+
+    // Fetch all registered users on mount
+    useEffect(() => {
+        fetchRegisteredUsers();
+    }, []);
+
+    // Setup Socket.IO connection for real-time messaging
+    useEffect(() => {
+        const SOCKET_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+        const socket: Socket = io(SOCKET_URL);
+
+        socket.on('connect', () => {
+            console.log('✓ Connected to chat backend');
+        });
+
+        socket.on('new_message', (message: Message) => {
+            console.log('📩 Received new message:', message);
+            // Add message to the appropriate conversation
+            setConversations(prev => prev.map(convo => {
+                if (convo.id === message.channelId) {
+                    // Avoid duplicates
+                    const exists = convo.messages.some(m => m.id === message.id);
+                    if (exists) return convo;
+
+                    return {
+                        ...convo,
+                        messages: [...convo.messages, message],
+                        lastMessage: message.content || 'New message',
+                        timestamp: 'just now'
+                    };
+                }
+                return convo;
+            }));
+        });
+
+        socket.on('disconnect', () => {
+            console.log('✗ Disconnected from chat backend');
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, []);
+
+    const fetchRegisteredUsers = async () => {
+        try {
+            const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+            const response = await fetch(`${BACKEND_URL}/api/auth/users`);
+            const data = await response.json();
+            // Filter out current user
+            const otherUsers = data.users.filter((u: User) => u.id !== user?.id);
+            setAvailableUsers(otherUsers);
+        } catch (error) {
+            console.error('Error fetching users:', error);
+        }
+    };
 
     const selectedConversation = conversations.find(c => c.id === selectedConversationId);
 
@@ -28,39 +87,75 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
         c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const handleSendMessage = (message: string, file?: File) => {
-        if (!selectedConversationId || !user) return;
+    // Filter users based on search query
+    const filteredUsers = availableUsers.filter(u =>
+        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
-        const newMessage: Message = {
-            id: Date.now(),
-            role: Role.USER,
-            content: message,
-            sender: user,
-            timestamp: new Date().toISOString(),
-            isRead: true, // User's own message is always "read"
-        };
+    // Show user list when searching or when no conversations exist
+    const shouldShowUserList = searchQuery.length > 0 || conversations.length === 0;
 
-        if (file) {
-            newMessage.file = {
-                url: URL.createObjectURL(file),
-                name: file.name,
-                type: file.type,
-            };
+    // Start a new conversation with a user
+    const startConversationWithUser = (selectedUser: User) => {
+        // Check if conversation already exists
+        const existingConvo = conversations.find(c => c.id === `user-${selectedUser.id}`);
+
+        if (existingConvo) {
+            setSelectedConversationId(existingConvo.id);
+            setShowUserList(false);
+            return;
         }
 
-        setConversations(prevConvos => {
-            return prevConvos.map(convo => {
-                if (convo.id === selectedConversationId) {
-                    return {
-                        ...convo,
-                        messages: [...convo.messages, newMessage],
-                        lastMessage: message || file?.name || 'Attachment',
-                        timestamp: 'just now',
-                    };
-                }
-                return convo;
+        // Create new conversation
+        const newConversation: DirectConversation = {
+            id: `user-${selectedUser.id}`,
+            name: selectedUser.name,
+            avatar: selectedUser.avatar,
+            lastMessage: 'Start a conversation...',
+            timestamp: 'now',
+            online: false,
+            messages: []
+        };
+
+        setConversations(prev => [newConversation, ...prev]);
+        setSelectedConversationId(newConversation.id);
+        setShowUserList(false);
+    };
+
+    const handleSendMessage = async (message: string, file?: File) => {
+        if (!selectedConversationId || !user) return;
+
+        setIsLoading(true);
+
+        try {
+            // Send message to backend API
+            const sentMessage = await apiSendMessage(selectedConversationId, message, user.id);
+
+            // Add the sent message to local state
+            setConversations(prevConvos => {
+                return prevConvos.map(convo => {
+                    if (convo.id === selectedConversationId) {
+                        // Check if message already exists (from Socket.IO)
+                        const exists = convo.messages.some(m => m.id === sentMessage.id);
+                        if (exists) return convo;
+
+                        return {
+                            ...convo,
+                            messages: [...convo.messages, sentMessage],
+                            lastMessage: message || 'New message',
+                            timestamp: 'just now',
+                        };
+                    }
+                    return convo;
+                });
             });
-        });
+        } catch (error) {
+            console.error('Error sending message:', error);
+            alert('Failed to send message. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     // FIX: Implement reaction handling within MessagesView as it owns the conversation state.
@@ -218,21 +313,76 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
                 </header>
                 
                 <div className="flex-1 overflow-y-auto p-2">
-                    {filteredConversations.length > 0 ? (
-                        <div className="space-y-1">
-                            {filteredConversations.map(dm => (
-                                <MessageListItem 
-                                    key={dm.id} 
-                                    message={dm} 
-                                    isActive={dm.id === selectedConversationId}
-                                    isCollapsed={isCollapsed}
-                                    onClick={() => setSelectedConversationId(dm.id)}
-                                />
-                            ))}
+                    {shouldShowUserList && filteredUsers.length > 0 && (
+                        <div className="mb-4">
+                            {!isCollapsed && (
+                                <div className="px-2 py-1 text-xs font-semibold text-text-secondary uppercase tracking-wide">
+                                    Available Users
+                                </div>
+                            )}
+                            <div className="space-y-1">
+                                {filteredUsers.map(availUser => (
+                                    <div
+                                        key={availUser.id}
+                                        onClick={() => startConversationWithUser(availUser)}
+                                        className="flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-background-main transition-colors"
+                                    >
+                                        <img
+                                            src={availUser.avatar}
+                                            alt={availUser.name}
+                                            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                                        />
+                                        {!isCollapsed && (
+                                            <div className="flex-1 overflow-hidden">
+                                                <p className="font-semibold text-sm text-text-primary truncate">
+                                                    {availUser.name}
+                                                </p>
+                                                <p className="text-xs text-text-secondary truncate">
+                                                    {availUser.email}
+                                                </p>
+                                            </div>
+                                        )}
+                                        {!isCollapsed && (
+                                            <div className="text-xs text-accent">
+                                                Start Chat
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    ) : (
+                    )}
+
+                    {filteredConversations.length > 0 && (
+                        <div>
+                            {!isCollapsed && shouldShowUserList && filteredUsers.length > 0 && (
+                                <div className="px-2 py-1 text-xs font-semibold text-text-secondary uppercase tracking-wide">
+                                    Your Conversations
+                                </div>
+                            )}
+                            <div className="space-y-1">
+                                {filteredConversations.map(dm => (
+                                    <MessageListItem
+                                        key={dm.id}
+                                        message={dm}
+                                        isActive={dm.id === selectedConversationId}
+                                        isCollapsed={isCollapsed}
+                                        onClick={() => setSelectedConversationId(dm.id)}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {!shouldShowUserList && filteredConversations.length === 0 && (
                         <div className="text-center text-sm text-text-secondary p-4">
                             No conversations found.
+                        </div>
+                    )}
+
+                    {shouldShowUserList && filteredUsers.length === 0 && filteredConversations.length === 0 && (
+                        <div className="text-center text-sm text-text-secondary p-4">
+                            {searchQuery ? 'No users or conversations found.' : 'No other users registered yet.'}
                         </div>
                     )}
                 </div>
