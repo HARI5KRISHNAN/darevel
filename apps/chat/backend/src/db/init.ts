@@ -31,6 +31,25 @@ export async function initializeDatabase(): Promise<boolean> {
   });
 
   try {
+    // Check if PostgreSQL user exists
+    const userCheckResult = await adminPool.query(
+      `SELECT 1 FROM pg_roles WHERE rolname = $1`,
+      [dbConfig.user]
+    );
+
+    if (userCheckResult.rows.length === 0) {
+      console.log(`👤 Creating PostgreSQL user: ${dbConfig.user}`);
+      await adminPool.query(
+        `CREATE USER ${dbConfig.user} WITH ENCRYPTED PASSWORD '${dbConfig.password}'`
+      );
+      await adminPool.query(
+        `ALTER USER ${dbConfig.user} CREATEDB`
+      );
+      console.log(`✅ User created: ${dbConfig.user}`);
+    } else {
+      console.log(`✅ User already exists: ${dbConfig.user}`);
+    }
+
     // Check if our database exists
     const dbCheckResult = await adminPool.query(
       `SELECT 1 FROM pg_database WHERE datname = $1`,
@@ -44,6 +63,12 @@ export async function initializeDatabase(): Promise<boolean> {
     } else {
       console.log(`✅ Database already exists: ${dbConfig.database}`);
     }
+
+    // Grant privileges to user on the database
+    await adminPool.query(
+      `GRANT ALL PRIVILEGES ON DATABASE ${dbConfig.database} TO ${dbConfig.user}`
+    );
+    console.log(`✅ Granted privileges to user: ${dbConfig.user}`);
 
     await adminPool.end();
 
