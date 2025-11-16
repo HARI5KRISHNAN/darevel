@@ -169,7 +169,8 @@ export async function initializeDatabase(): Promise<boolean> {
     const pool = new Pool(dbConfig);
 
     console.log('📋 Running database migrations...');
-    const schemaPath = path.join(process.cwd(), 'src', 'db', 'schema.sql');
+    // Use __dirname to get path relative to this file
+    const schemaPath = path.join(__dirname, 'schema.sql');
     console.log(`Reading schema from: ${schemaPath}`);
     const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
 
