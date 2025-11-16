@@ -71,8 +71,8 @@ const MessageListItem: React.FC<MessageListItemProps> = ({ message, isActive, is
                 </div>
             </div>
         </button>
-        {/* Pin and Mute buttons - show on hover */}
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+        {/* Pin and Mute buttons - show on hover - positioned lower to not cover timestamp */}
+        <div className="absolute right-2 bottom-2 flex gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity bg-background-panel rounded px-1 shadow-sm">
             {onTogglePin && (
                 <button
                     onClick={(e) => {

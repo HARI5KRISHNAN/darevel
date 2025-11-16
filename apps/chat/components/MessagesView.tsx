@@ -37,6 +37,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
     const [showGroupModal, setShowGroupModal] = useState(false);
     const [groupName, setGroupName] = useState('');
     const [selectedGroupMembers, setSelectedGroupMembers] = useState<User[]>([]);
+    const [groupMemberSearch, setGroupMemberSearch] = useState('');
 
     // Helper function to create consistent channel ID for direct messages
     const createDirectMessageChannelId = (userId1: number, userId2: number): string => {
@@ -87,18 +88,43 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
                 });
             } else {
                 // Auto-create conversation if message arrives for non-existent channel
-                // This happens when someone messages you before you open their conversation
-                if (message.sender && message.channelId?.startsWith('dm-')) {
-                    const newConvo: DirectConversation = {
-                        id: message.channelId,
-                        name: message.sender.name,
-                        avatar: message.sender.avatar,
-                        lastMessage: message.content || 'New message',
-                        timestamp: 'just now',
-                        online: false,
-                        messages: [message]
-                    };
-                    return [newConvo, ...prev];
+                if (message.sender && message.channelId) {
+                    // Handle direct messages
+                    if (message.channelId.startsWith('dm-')) {
+                        const newConvo: DirectConversation = {
+                            id: message.channelId,
+                            name: message.sender.name,
+                            avatar: message.sender.avatar,
+                            lastMessage: message.content || 'New message',
+                            timestamp: 'just now',
+                            online: false,
+                            messages: [message]
+                        };
+                        return [newConvo, ...prev];
+                    }
+                    // Handle group messages
+                    else if (message.channelId.startsWith('group-')) {
+                        // Try to parse group info from message content
+                        let groupName = 'Group Chat';
+                        const groupCreationMatch = message.content.match(/Group "([^"]+)" created/);
+                        if (groupCreationMatch) {
+                            groupName = groupCreationMatch[1];
+                        }
+
+                        const newGroup: DirectConversation = {
+                            id: message.channelId,
+                            name: groupName,
+                            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(groupName)}&background=random`,
+                            lastMessage: message.content || 'New message',
+                            timestamp: 'just now',
+                            online: false,
+                            messages: [message],
+                            isGroup: true,
+                            members: [] // Members will be populated from context
+                        };
+                        console.log(`✨ Auto-created group conversation: ${groupName}`);
+                        return [newGroup, ...prev];
+                    }
                 }
                 return prev;
             }
@@ -324,7 +350,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
     };
 
     // Create group chat
-    const handleCreateGroup = () => {
+    const handleCreateGroup = async () => {
         if (!user) return;
         if (!groupName.trim()) {
             alert('Please enter a group name');
@@ -356,6 +382,19 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
         setShowGroupModal(false);
         setGroupName('');
         setSelectedGroupMembers([]);
+        setGroupMemberSearch('');
+
+        // Send initial message to notify all members via WebSocket
+        try {
+            const memberNames = selectedGroupMembers.map(m => m.name).join(', ');
+            await apiSendMessage(
+                groupId,
+                `🎉 Group "${groupName}" created by ${user.name}. Members: ${memberNames}`,
+                user.id
+            );
+        } catch (error) {
+            console.error('Error sending group creation message:', error);
+        }
     };
 
     const handleSendMessage = async (message: string, file?: File) => {
@@ -532,10 +571,13 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
                     {!isCollapsed && (
                         <button
                             onClick={() => setShowGroupModal(true)}
-                            className="text-xs font-semibold text-accent hover:underline ml-2 shrink-0"
-                            title="Create Group"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-accent to-accent-hover text-white text-xs font-semibold rounded-md hover:shadow-lg hover:scale-105 transition-all ml-2 shrink-0"
+                            title="Create Group Chat"
                         >
-                            + Group
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Create Group
                         </button>
                     )}
                     {!isCollapsed && hasUnreadMessages && (
@@ -688,8 +730,26 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
                             <label className="block text-sm font-semibold text-text-primary mb-2">
                                 Select Members ({selectedGroupMembers.length} selected)
                             </label>
+                            {/* Search input */}
+                            <div className="mb-2 relative">
+                                <input
+                                    type="text"
+                                    value={groupMemberSearch}
+                                    onChange={(e) => setGroupMemberSearch(e.target.value)}
+                                    className="w-full px-3 py-2 pl-9 border border-border-color rounded-md bg-background-main text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                                    placeholder="Search members..."
+                                />
+                                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
                             <div className="max-h-60 overflow-y-auto border border-border-color rounded-md">
-                                {availableUsers.map(availUser => (
+                                {availableUsers
+                                    .filter(u =>
+                                        u.name.toLowerCase().includes(groupMemberSearch.toLowerCase()) ||
+                                        u.email.toLowerCase().includes(groupMemberSearch.toLowerCase())
+                                    )
+                                    .map(availUser => (
                                     <div
                                         key={availUser.id}
                                         onClick={() => {
@@ -729,6 +789,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
                                     setShowGroupModal(false);
                                     setGroupName('');
                                     setSelectedGroupMembers([]);
+                                    setGroupMemberSearch('');
                                 }}
                                 className="px-4 py-2 bg-background-main border border-border-color text-text-primary font-semibold rounded-lg hover:bg-input-field transition-colors"
                             >
