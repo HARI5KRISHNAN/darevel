@@ -17,25 +17,8 @@ const PodAlertsPanel: React.FC = () => {
 
   useEffect(() => {
     fetchAlerts();
-
-    // Listen for real-time alerts via Socket.IO
-    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-    const socket = new WebSocket(`ws://${BACKEND_URL.replace('http://', '')}`);
-
-    socket.addEventListener('message', (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'pod_alert') {
-          setAlerts(prev => [data.alert, ...prev]);
-        }
-      } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
-      }
-    });
-
-    return () => {
-      socket.close();
-    };
+    // Socket.IO connection is handled by useRealTimeK8s hook
+    // Remove duplicate WebSocket connection
   }, []);
 
   const fetchAlerts = async () => {

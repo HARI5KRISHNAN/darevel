@@ -53,7 +53,8 @@ const ConversationView: React.FC<ConversationViewProps> = ({ conversation, onSen
     useEffect(() => {
         onMarkAsRead();
         setSelectedMessageIds([]); // Clear selection when conversation changes
-    }, [conversation.id, onMarkAsRead]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [conversation.id]);
 
     useEffect(() => {
         // Clear selection if new messages arrive
