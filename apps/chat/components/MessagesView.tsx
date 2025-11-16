@@ -1,10 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import MessageListItem from './MessageListItem';
 import { DirectConversation, Role, Message, User } from '../types';
 import ConversationView from './ConversationView';
 import { DoubleArrowLeftIcon, DoubleArrowRightIcon, SearchIcon } from './icons';
 import { generateSummary as apiGenerateSummary, sendMessage as apiSendMessage, getMessages as apiGetMessages } from '../services/api';
-import { io, Socket } from 'socket.io-client';
+import { useWebSocket } from '../hooks/useWebSocket';
 
 
 // Default conversations (channels)
@@ -34,79 +34,40 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
     const [availableUsers, setAvailableUsers] = useState<User[]>([]);
     const [showUserList, setShowUserList] = useState(false);
-    const [socket, setSocket] = useState<Socket | null>(null);
+
+    // WebSocket message handler
+    const handleWebSocketMessage = useCallback((message: Message) => {
+        console.log('📩 Received message via WebSocket:', message);
+
+        setConversations(prev => prev.map(convo => {
+            if (convo.id === message.channelId) {
+                // Check if message already exists
+                const exists = convo.messages.some(m => m.id === message.id);
+                if (exists) return convo;
+
+                return {
+                    ...convo,
+                    messages: [...convo.messages, message],
+                    lastMessage: message.content || 'New message',
+                    timestamp: 'just now'
+                };
+            }
+            return convo;
+        }));
+    }, []);
+
+    // Connect to WebSocket for real-time messages
+    const { isConnected } = useWebSocket({
+        channelId: selectedConversationId,
+        onMessageReceived: handleWebSocketMessage
+    });
 
     // Fetch all registered users on mount
     useEffect(() => {
         fetchRegisteredUsers();
     }, []);
 
-    // Setup Socket.IO connection for real-time messaging
-    useEffect(() => {
-        // TODO: Migrate to Spring WebSocket (SockJS/STOMP)
-        // The Java backend doesn't support Socket.IO
-        console.warn('Real-time messaging disabled - Socket.IO not available in Java backend');
-        // Disable Socket.IO for now
-        return;
-
-        /* Socket.IO code disabled
-        const SOCKET_URL = import.meta.env.VITE_WEBSOCKET_URL || 'http://localhost:8082';
-        const socketInstance: Socket = io(SOCKET_URL);
-
-        socketInstance.on('connect', () => {
-            console.log('✓ Connected to chat backend');
-        });
-
-        socketInstance.on('new_message', (message: Message) => {
-            console.log('📩 Received new message:', message);
-            // Add message to the appropriate conversation
-            setConversations(prev => prev.map(convo => {
-                if (convo.id === message.channelId) {
-                    // Avoid duplicates
-                    const exists = convo.messages.some(m => m.id === message.id);
-                    if (exists) return convo;
-
-                    return {
-                        ...convo,
-                        messages: [...convo.messages, message],
-                        lastMessage: message.content || 'New message',
-                        timestamp: 'just now'
-                    };
-                }
-                return convo;
-            }));
-        });
-
-        socketInstance.on('disconnect', () => {
-            console.log('✗ Disconnected from chat backend');
-        });
-
-        setSocket(socketInstance);
-
-        return () => {
-            socketInstance.disconnect();
-        };
-        */
-    }, []);
-
-    // Join/leave channels when conversation changes
-    useEffect(() => {
-        if (!socket) return;
-
-        // Leave previous channel
-        const previousChannel = conversations.find(c => c.id !== selectedConversationId);
-        if (previousChannel) {
-            socket.emit('leave_channel', previousChannel.id);
-        }
-
-        // Join new channel
-        if (selectedConversationId) {
-            socket.emit('join_channel', selectedConversationId);
-            console.log(`Joined channel: ${selectedConversationId}`);
-        }
-    }, [selectedConversationId, socket]);
-
-    // Fetch messages when conversation is selected and poll for updates
+    // Fetch messages when conversation is selected (initial load only)
     useEffect(() => {
         if (!selectedConversationId) return;
 
@@ -131,15 +92,8 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
             }
         };
 
-        // Initial fetch
+        // Initial fetch only - new messages come via WebSocket
         fetchMessages();
-
-        // Poll for new messages every 3 seconds (since Socket.IO is disabled)
-        const pollInterval = setInterval(fetchMessages, 3000);
-
-        return () => {
-            clearInterval(pollInterval);
-        };
     }, [selectedConversationId]);
 
     const fetchRegisteredUsers = async () => {
@@ -211,11 +165,11 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
             // Send message to backend API
             const sentMessage = await apiSendMessage(selectedConversationId, message, user.id);
 
-            // Add the sent message to local state
+            // Optimistic update - add message immediately (will also come via WebSocket)
             setConversations(prevConvos => {
                 return prevConvos.map(convo => {
                     if (convo.id === selectedConversationId) {
-                        // Check if message already exists (from polling or previous send)
+                        // Check if message already exists (from WebSocket)
                         const exists = convo.messages.some(m => m.id === sentMessage.id);
                         if (exists) return convo;
 

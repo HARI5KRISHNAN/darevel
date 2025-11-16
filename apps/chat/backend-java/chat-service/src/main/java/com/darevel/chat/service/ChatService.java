@@ -8,6 +8,7 @@ import com.darevel.chat.repository.MessageRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 public class ChatService {
 
     private final MessageRepository messageRepository;
+    private final SimpMessagingTemplate messagingTemplate;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${auth.service.url:http://localhost:8081}")
@@ -45,7 +47,13 @@ public class ChatService {
 
         message = messageRepository.save(message);
 
-        return enrichMessageWithUserInfo(message);
+        MessageDto messageDto = enrichMessageWithUserInfo(message);
+
+        // Broadcast message to WebSocket subscribers
+        messagingTemplate.convertAndSend("/topic/messages/" + channelId, messageDto);
+        log.info("Broadcasted message to /topic/messages/{}", channelId);
+
+        return messageDto;
     }
 
     @Transactional
