@@ -18,7 +18,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
     setError('');
     setLoading(true);
 
-    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+    // Use Auth Service (port 8081)
+    const AUTH_API_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:8081';
     const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
 
     try {
@@ -26,7 +27,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
         ? { email, password }
         : { name, email, password };
 
-      const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+      const response = await fetch(`${AUTH_API_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -38,9 +39,16 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
         throw new Error(data.message || 'Authentication failed');
       }
 
-      // Store user in localStorage and call parent callback
-      const user: User = data.user;
+      // Handle Java backend ApiResponse wrapper
+      const authResponse = data.data || data;
+      const user: User = authResponse.user;
+
+      // Store user and token in localStorage
       localStorage.setItem('whooper_user', JSON.stringify(user));
+      if (authResponse.token) {
+        localStorage.setItem('whooper_token', authResponse.token);
+      }
+
       onLogin(user);
 
     } catch (err: any) {

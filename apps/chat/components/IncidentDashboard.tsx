@@ -49,7 +49,8 @@ const IncidentDashboard: React.FC = () => {
   const [selectedSubject, setSelectedSubject] = useState(`Kubernetes Analytics Report - ${new Date().toLocaleDateString()}`);
   const [loadingSubject, setLoadingSubject] = useState(false);
 
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+  // TODO: Incidents API not implemented in Java backend yet
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8082';
 
   useEffect(() => {
     fetchIncidents();
