@@ -743,13 +743,50 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>
                             </div>
+                            {!groupMemberSearch && (
+                                <div className="text-xs text-text-secondary mb-2 px-1">
+                                    Showing recent chats. Search to see all users.
+                                </div>
+                            )}
                             <div className="max-h-60 overflow-y-auto border border-border-color rounded-md">
-                                {availableUsers
-                                    .filter(u =>
+                                {(() => {
+                                    // Get recent users from conversations (exclude current user and groups)
+                                    const recentUserIds = conversations
+                                        .filter(c => c.id.startsWith('dm-') && !c.isGroup)
+                                        .slice(0, 5) // Take top 5 recent conversations
+                                        .map(c => {
+                                            // Extract other user's ID from dm-{id1}-{id2}
+                                            const parts = c.id.split('-');
+                                            if (parts.length === 3) {
+                                                const userId1 = parseInt(parts[1]);
+                                                const userId2 = parseInt(parts[2]);
+                                                return userId1 === user?.id ? userId2 : userId1;
+                                            }
+                                            return null;
+                                        })
+                                        .filter(id => id !== null) as number[];
+
+                                    // Filter users based on search
+                                    let usersToShow = availableUsers.filter(u =>
                                         u.name.toLowerCase().includes(groupMemberSearch.toLowerCase()) ||
                                         u.email.toLowerCase().includes(groupMemberSearch.toLowerCase())
-                                    )
-                                    .map(availUser => (
+                                    );
+
+                                    // If no search, show only recent users (max 3)
+                                    if (!groupMemberSearch) {
+                                        const recentUsers = usersToShow.filter(u => recentUserIds.includes(u.id));
+                                        usersToShow = recentUsers.slice(0, 3);
+                                    }
+
+                                    if (usersToShow.length === 0) {
+                                        return (
+                                            <div className="p-4 text-center text-sm text-text-secondary">
+                                                {groupMemberSearch ? 'No users found' : 'No recent chats. Search to find users.'}
+                                            </div>
+                                        );
+                                    }
+
+                                    return usersToShow.map(availUser => (
                                     <div
                                         key={availUser.id}
                                         onClick={() => {
@@ -779,7 +816,8 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
                                             <p className="text-xs text-text-secondary">{availUser.email}</p>
                                         </div>
                                     </div>
-                                ))}
+                                    ));
+                                })()}
                             </div>
                         </div>
 
