@@ -2,9 +2,12 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import MessageListItem from './MessageListItem';
 import { DirectConversation, Role, Message, User } from '../types';
 import ConversationView from './ConversationView';
-import { DoubleArrowLeftIcon, DoubleArrowRightIcon, SearchIcon } from './icons';
-import { generateSummary as apiGenerateSummary, sendMessage as apiSendMessage, getMessages as apiGetMessages, transformBackendMessage, getUserChannels } from '../services/api';
+import { DoubleArrowLeftIcon, DoubleArrowRightIcon } from './icons';
+import { generateSummary as apiGenerateSummary, sendMessage as apiSendMessage, getMessages as apiGetMessages, getUserChannels } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { useWebRTCCall } from '../hooks/useWebRTCCall';
+import CallWindow from './CallWindow';
+import IncomingCall from './IncomingCall';
 
 
 // Default conversations (channels)
@@ -23,21 +26,24 @@ export const dummyConversations: DirectConversation[] = [
 interface MessagesViewProps {
     user: User | null;
     searchQuery: string;
-    onStartCall: (channelId: string, callType: 'audio' | 'video') => void;
 }
 
-const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartCall }) => {
+const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery }) => {
     const [conversations, setConversations] = useState<DirectConversation[]>(dummyConversations);
     const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
     const [availableUsers, setAvailableUsers] = useState<User[]>([]);
-    const [showUserList, setShowUserList] = useState(false);
     const [showGroupModal, setShowGroupModal] = useState(false);
     const [groupName, setGroupName] = useState('');
     const [selectedGroupMembers, setSelectedGroupMembers] = useState<User[]>([]);
     const [groupMemberSearch, setGroupMemberSearch] = useState('');
+
+    // WebRTC call state
+    const [incomingCall, setIncomingCall] = useState<{ type: 'audio' | 'video'; caller: User; receiver: User; channelId: string; offer?: RTCSessionDescriptionInit } | null>(null);
+    const localVideoRef = useRef<HTMLVideoElement>(null);
+    const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
     // Helper function to create consistent channel ID for direct messages
     const createDirectMessageChannelId = (userId1: number, userId2: number): string => {
@@ -45,6 +51,39 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
         const [smallerId, largerId] = [userId1, userId2].sort((a, b) => a - b);
         return `dm-${smallerId}-${largerId}`;
     };
+
+    // WebRTC call hook
+    const {
+        callState,
+        currentCall,
+        localStream,
+        remoteStream,
+        isMuted,
+        isVideoOff,
+        startCall,
+        answerCall,
+        endCall,
+        toggleMute,
+        toggleVideo,
+    } = useWebRTCCall({
+        user: user,
+        onIncomingCall: (callData) => {
+            setIncomingCall(callData);
+        },
+    });
+
+    // Attach streams to video elements when they change
+    useEffect(() => {
+        if (localVideoRef.current && localStream) {
+            localVideoRef.current.srcObject = localStream;
+        }
+    }, [localStream]);
+
+    useEffect(() => {
+        if (remoteVideoRef.current && remoteStream) {
+            remoteVideoRef.current.srcObject = remoteStream;
+        }
+    }, [remoteStream]);
 
     // Helper to save conversation settings to localStorage
     const saveConversationSettings = (convos: DirectConversation[]) => {
@@ -132,7 +171,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
     }, []);
 
     // Connect to WebSocket for real-time messages
-    const { isConnected } = useWebSocket({
+    useWebSocket({
         channelId: selectedConversationId,
         onMessageReceived: handleWebSocketMessage
     });
@@ -280,7 +319,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
     // Filter users based on search query
     const filteredUsers = availableUsers.filter(u =>
         u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchQuery.toLowerCase())
+        (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
     // Show user list when searching or when no conversations exist
@@ -298,7 +337,6 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
 
         if (existingConvo) {
             setSelectedConversationId(existingConvo.id);
-            setShowUserList(false);
             return;
         }
 
@@ -315,7 +353,6 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
 
         setConversations(prev => [newConversation, ...prev]);
         setSelectedConversationId(newConversation.id);
-        setShowUserList(false);
     };
 
     // Toggle pin status
@@ -363,7 +400,6 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
 
         // Create group channel ID
         const groupId = `group-${Date.now()}`;
-        const memberIds = [user, ...selectedGroupMembers].map(u => u.id).sort();
 
         const newGroup: DirectConversation = {
             id: groupId,
@@ -397,7 +433,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
         }
     };
 
-    const handleSendMessage = async (message: string, file?: File) => {
+    const handleSendMessage = async (message: string, _file?: File) => {
         if (!selectedConversationId || !user) return;
 
         setIsLoading(true);
@@ -558,6 +594,65 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
         }
     };
 
+    // Handle starting a call
+    const handleStartCall = async (callType: 'audio' | 'video') => {
+        if (!selectedConversation || !user) return;
+
+        // Get receiver info based on conversation type
+        let receiver: User | undefined;
+
+        if (selectedConversation.isGroup) {
+            // For groups, we would need to implement group calling (future feature)
+            alert('Group calls are not yet supported');
+            return;
+        } else {
+            // For direct messages, extract the other user
+            const parts = selectedConversation.id.split('-');
+            if (parts.length === 3) {
+                const userId1 = parseInt(parts[1]);
+                const userId2 = parseInt(parts[2]);
+                const otherUserId = userId1 === user.id ? userId2 : userId1;
+                receiver = availableUsers.find(u => u.id === otherUserId);
+            }
+        }
+
+        if (!receiver) {
+            alert('Cannot find receiver for this conversation');
+            return;
+        }
+
+        try {
+            await startCall(receiver, selectedConversation.id, callType);
+        } catch (error) {
+            console.error('Error starting call:', error);
+            alert('Failed to start call. Please check your camera/microphone permissions.');
+        }
+    };
+
+    // Handle accepting an incoming call
+    const handleAcceptCall = async () => {
+        if (!incomingCall || !incomingCall.offer) return;
+
+        try {
+            await answerCall(incomingCall, incomingCall.offer);
+            setIncomingCall(null);
+        } catch (error) {
+            console.error('Error accepting call:', error);
+            alert('Failed to accept call. Please check your camera/microphone permissions.');
+        }
+    };
+
+    // Handle rejecting an incoming call
+    const handleRejectCall = () => {
+        endCall();
+        setIncomingCall(null);
+    };
+
+    // Handle ending the current call
+    const handleEndCall = () => {
+        endCall();
+    };
+
     return (
         <div className="flex-1 flex min-w-0 h-full">
             <aside className={`bg-background-panel flex flex-col border-r border-border-color transition-all duration-300 ease-in-out ${isCollapsed ? 'w-20' : 'w-96'}`}>
@@ -698,7 +793,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
                             }
                         }}
                         onReact={handleReact}
-                        onStartCall={(type) => onStartCall(selectedConversation.id, type)}
+                        onStartCall={handleStartCall}
                     />
                 ) : (
                     <div className="flex-1 flex items-center justify-center">
@@ -769,7 +864,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
                                     // Filter users based on search
                                     let usersToShow = availableUsers.filter(u =>
                                         u.name.toLowerCase().includes(groupMemberSearch.toLowerCase()) ||
-                                        u.email.toLowerCase().includes(groupMemberSearch.toLowerCase())
+                                        (u.email && u.email.toLowerCase().includes(groupMemberSearch.toLowerCase()))
                                     );
 
                                     // If no search, show only recent users (max 3)
@@ -842,6 +937,33 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery, onStartC
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Call Window - Full screen when call is active */}
+            {callState !== 'idle' && currentCall && (
+                <CallWindow
+                    callState={callState}
+                    callType={currentCall.type}
+                    caller={currentCall.caller}
+                    receiver={currentCall.receiver}
+                    localVideoRef={localVideoRef}
+                    remoteVideoRef={remoteVideoRef}
+                    isMuted={isMuted}
+                    isVideoOff={isVideoOff}
+                    onToggleMute={toggleMute}
+                    onToggleVideo={toggleVideo}
+                    onEndCall={handleEndCall}
+                />
+            )}
+
+            {/* Incoming Call Notification */}
+            {incomingCall && (
+                <IncomingCall
+                    caller={incomingCall.caller}
+                    callType={incomingCall.type}
+                    onAccept={handleAcceptCall}
+                    onReject={handleRejectCall}
+                />
             )}
         </div>
     );
