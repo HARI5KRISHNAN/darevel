@@ -102,6 +102,11 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
         if (!user) return;
 
         try {
+            // Check if mediaDevices API is available
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error('Your browser does not support camera/microphone access. Please use Chrome, Firefox, or Edge, and ensure the app is served over HTTPS or localhost.');
+            }
+
             setCallState('calling');
             setCurrentCall({
                 type: callType,
@@ -148,7 +153,8 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
 
         } catch (error) {
             console.error('Error starting call:', error);
-            alert('Failed to start call. Please check camera/microphone permissions.');
+            const errorMessage = error instanceof Error ? error.message : 'Failed to start call. Please check camera/microphone permissions.';
+            alert(errorMessage);
             endCall();
         }
     }, [user, initializePeerConnection, sendSignal]);
@@ -156,6 +162,11 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
     // Answer an incoming call
     const answerCall = useCallback(async (callData: CallData, offer: RTCSessionDescriptionInit) => {
         try {
+            // Check if mediaDevices API is available
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error('Your browser does not support camera/microphone access. Please use Chrome, Firefox, or Edge, and ensure the app is served over HTTPS or localhost.');
+            }
+
             setCallState('connected');
             setCurrentCall(callData);
 
@@ -199,7 +210,8 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
 
         } catch (error) {
             console.error('Error answering call:', error);
-            alert('Failed to answer call. Please check camera/microphone permissions.');
+            const errorMessage = error instanceof Error ? error.message : 'Failed to answer call. Please check camera/microphone permissions.';
+            alert(errorMessage);
             endCall();
         }
     }, [initializePeerConnection, sendSignal]);
