@@ -81,12 +81,24 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
 
         // Handle connection state changes
         pc.onconnectionstatechange = () => {
-            console.log('Connection state:', pc.connectionState);
+            console.log('🔄 Connection state changed:', pc.connectionState);
             if (pc.connectionState === 'connected') {
+                console.log('✓ Peer connection established!');
                 setCallState('connected');
             } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+                console.log('❌ Connection failed/disconnected, ending call');
                 endCall();
             }
+        };
+
+        // Log ICE gathering state
+        pc.onicegatheringstatechange = () => {
+            console.log('🧊 ICE gathering state:', pc.iceGatheringState);
+        };
+
+        // Log ICE connection state
+        pc.oniceconnectionstatechange = () => {
+            console.log('🧊 ICE connection state:', pc.iceConnectionState);
         };
 
         peerConnection.current = pc;
@@ -262,16 +274,24 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
 
     // End the call
     const endCall = useCallback(() => {
+        console.log('🛑 ============ END CALL TRIGGERED ============');
+        console.log('🛑 Call stack:', new Error().stack);
+        console.log('🛑 Current call:', currentCall);
+        console.log('🛑 Call state:', callState);
+
         // Send end call signal
         if (currentCall && sendSignal && user) {
             const otherUser = currentCall.caller.id === user.id ? currentCall.receiver : currentCall.caller;
+            console.log('🛑 Sending call-ended signal to:', otherUser.name);
             sendSignal({
                 type: 'call-ended',
                 from: user.id,
                 to: otherUser.id,
                 channelId: currentCall.channelId,
             });
-            console.log('Call ended signal sent');
+            console.log('🛑 Call ended signal sent');
+        } else {
+            console.log('🛑 Not sending end signal - currentCall:', !!currentCall, 'sendSignal:', !!sendSignal, 'user:', !!user);
         }
 
         // Stop all tracks
