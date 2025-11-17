@@ -178,21 +178,12 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
             console.log('🎬 ICE connection state:', pc.iceConnectionState);
 
             try {
-                console.log('🎬 Calling pc.createOffer() with options...');
-                const offerOptions = {
-                    offerToReceiveAudio: true,
-                    offerToReceiveVideo: callType === 'video',
-                };
-                console.log('🎬 Offer options:', offerOptions);
+                console.log('🎬 Calling pc.createOffer() without deprecated options...');
 
-                // Add a timeout to detect if createOffer hangs
-                const offerPromise = pc.createOffer(offerOptions);
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('createOffer timeout after 10 seconds')), 10000)
-                );
-
+                // Don't use deprecated offerToReceiveAudio/Video options
+                // Since we've already added tracks, the offer will include them automatically
                 console.log('🎬 Waiting for offer...');
-                const offer = await Promise.race([offerPromise, timeoutPromise]) as RTCSessionDescriptionInit;
+                const offer = await pc.createOffer();
                 console.log('✓ Offer created:', offer.type);
                 console.log('✓ Offer SDP length:', offer.sdp?.length || 0, 'chars');
 
