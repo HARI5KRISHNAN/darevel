@@ -19,6 +19,19 @@ export const useWebSocket = ({ channelId, onMessageReceived, user, onCallSignal 
     const subscriptionRef = useRef<any>(null);
     const callSubscriptionRef = useRef<any>(null);
 
+    // Use refs to avoid reconnecting when callbacks change
+    const onMessageReceivedRef = useRef(onMessageReceived);
+    const onCallSignalRef = useRef(onCallSignal);
+
+    // Update refs when callbacks change
+    useEffect(() => {
+        onMessageReceivedRef.current = onMessageReceived;
+    }, [onMessageReceived]);
+
+    useEffect(() => {
+        onCallSignalRef.current = onCallSignal;
+    }, [onCallSignal]);
+
     useEffect(() => {
         // WebSocket URL - using chat service on port 8082
         const WS_URL = import.meta.env.VITE_WEBSOCKET_URL || 'http://localhost:8082';
@@ -54,7 +67,7 @@ export const useWebSocket = ({ channelId, onMessageReceived, user, onCallSignal 
                             const backendMessage = JSON.parse(message.body);
                             // Transform backend message to frontend Message type
                             const transformedMessage = transformBackendMessage(backendMessage);
-                            onMessageReceived(transformedMessage);
+                            onMessageReceivedRef.current(transformedMessage);
                         } catch (error) {
                             console.error('Error parsing message:', error);
                         }
@@ -64,7 +77,7 @@ export const useWebSocket = ({ channelId, onMessageReceived, user, onCallSignal 
             }
 
             // Subscribe to call signaling for this user
-            if (user && onCallSignal && client.connected) {
+            if (user && onCallSignalRef.current && client.connected) {
                 console.log(`🔔 Subscribing to /topic/call-signal/${user.id} for user: ${user.name}`);
                 callSubscriptionRef.current = client.subscribe(
                     `/topic/call-signal/${user.id}`,
@@ -74,7 +87,9 @@ export const useWebSocket = ({ channelId, onMessageReceived, user, onCallSignal 
                             const signal: SignalingMessage = JSON.parse(message.body);
                             console.log('📞 PARSED call signal:', signal);
                             console.log('📞 Signal type:', signal.type, 'From:', signal.from, 'To:', signal.to);
-                            onCallSignal(signal);
+                            if (onCallSignalRef.current) {
+                                onCallSignalRef.current(signal);
+                            }
                         } catch (error) {
                             console.error('❌ Error parsing call signal:', error);
                         }
@@ -82,7 +97,7 @@ export const useWebSocket = ({ channelId, onMessageReceived, user, onCallSignal 
                 );
                 console.log(`✅ Successfully subscribed to /topic/call-signal/${user.id}`);
             } else {
-                console.log(`⚠️ Not subscribing to call signals. user: ${!!user}, onCallSignal: ${!!onCallSignal}, connected: ${client.connected}`);
+                console.log(`⚠️ Not subscribing to call signals. user: ${!!user}, onCallSignal: ${!!onCallSignalRef.current}, connected: ${client.connected}`);
             }
         };
 
@@ -117,7 +132,7 @@ export const useWebSocket = ({ channelId, onMessageReceived, user, onCallSignal 
                 console.log('WebSocket client deactivated');
             }
         };
-    }, [channelId, onMessageReceived, user, onCallSignal]);
+    }, [channelId, user]); // Only reconnect when channelId or user changes, not when callbacks change
 
     // Send call signaling message
     const sendSignalMessage = (message: SignalingMessage) => {
