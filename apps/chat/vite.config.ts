@@ -7,9 +7,7 @@ export default defineConfig({
     global: 'globalThis',
   },
   server: {
-    host: "chat.darevel.local",
+    host: "localhost",
     port: 3003,
-    https: false, // Disabled - requires Vite 6.x for basicSsl plugin
-    allowedHosts: ["chat.darevel.local"],
   }
 });
