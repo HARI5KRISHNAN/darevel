@@ -711,6 +711,9 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery }) => {
 
     // Handle ending the current call
     const handleEndCall = () => {
+        console.log('👆 handleEndCall called from UI');
+        console.log('👆 Call state:', callState);
+        console.log('👆 Current call:', currentCall);
         endCall();
     };
 
