@@ -52,18 +52,18 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
     };
 
     // Initialize peer connection
-    const initializePeerConnection = useCallback((receiver: User) => {
+    const initializePeerConnection = useCallback((receiver: User, channelId: string) => {
         const pc = new RTCPeerConnection(iceServers);
 
         // Handle ICE candidates
         pc.onicecandidate = (event) => {
-            if (event.candidate && sendSignal && currentCall) {
-                console.log('Sending ICE candidate:', event.candidate);
+            if (event.candidate && sendSignal && user) {
+                console.log('🧊 Sending ICE candidate:', event.candidate);
                 sendSignal({
                     type: 'ice-candidate',
-                    from: user!.id,
+                    from: user.id,
                     to: receiver.id,
-                    channelId: currentCall.channelId,
+                    channelId: channelId,
                     candidate: event.candidate.toJSON(),
                 });
             }
@@ -103,7 +103,7 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
 
         peerConnection.current = pc;
         return pc;
-    }, [sendSignal, currentCall, user]);
+    }, [sendSignal, user]);
 
     // Start a call
     const startCall = useCallback(async (
@@ -154,7 +154,7 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
 
             // Initialize peer connection
             console.log('🎬 Initializing peer connection...');
-            const pc = initializePeerConnection(receiver);
+            const pc = initializePeerConnection(receiver, channelId);
             console.log('✓ Peer connection initialized');
 
             // Add local tracks to peer connection
@@ -223,7 +223,7 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
             }
 
             // Initialize peer connection
-            const pc = initializePeerConnection(callData.caller);
+            const pc = initializePeerConnection(callData.caller, callData.channelId);
 
             // Add local tracks
             stream.getTracks().forEach((track) => {
