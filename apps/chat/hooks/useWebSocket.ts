@@ -32,7 +32,10 @@ export const useWebSocket = ({ channelId, onMessageReceived, user, onCallSignal 
         onCallSignalRef.current = onCallSignal;
     }, [onCallSignal]);
 
+    // Main WebSocket connection - only reconnect when user changes
     useEffect(() => {
+        if (!user) return;
+
         // WebSocket URL - using chat service on port 8082
         const WS_URL = import.meta.env.VITE_WEBSOCKET_URL || 'http://localhost:8082';
         const socketUrl = `${WS_URL}/ws`;
@@ -57,26 +60,7 @@ export const useWebSocket = ({ channelId, onMessageReceived, user, onCallSignal 
             console.log('✓ Connected to WebSocket');
             setIsConnected(true);
 
-            // Subscribe to channel if channelId is provided
-            if (channelId && client.connected) {
-                subscriptionRef.current = client.subscribe(
-                    `/topic/messages/${channelId}`,
-                    (message) => {
-                        console.log('📩 Received WebSocket message:', message.body);
-                        try {
-                            const backendMessage = JSON.parse(message.body);
-                            // Transform backend message to frontend Message type
-                            const transformedMessage = transformBackendMessage(backendMessage);
-                            onMessageReceivedRef.current(transformedMessage);
-                        } catch (error) {
-                            console.error('Error parsing message:', error);
-                        }
-                    }
-                );
-                console.log(`Subscribed to /topic/messages/${channelId}`);
-            }
-
-            // Subscribe to call signaling for this user
+            // Subscribe to call signaling for this user (always active)
             if (user && onCallSignalRef.current && client.connected) {
                 console.log(`🔔 Subscribing to /topic/call-signal/${user.id} for user: ${user.name}`);
                 callSubscriptionRef.current = client.subscribe(
@@ -117,12 +101,8 @@ export const useWebSocket = ({ channelId, onMessageReceived, user, onCallSignal 
         client.activate();
         clientRef.current = client;
 
-        // Cleanup on unmount or channel change
+        // Cleanup on unmount or user change
         return () => {
-            if (subscriptionRef.current) {
-                subscriptionRef.current.unsubscribe();
-                console.log(`Unsubscribed from /topic/messages/${channelId}`);
-            }
             if (callSubscriptionRef.current) {
                 callSubscriptionRef.current.unsubscribe();
                 console.log(`Unsubscribed from /topic/call-signal/${user?.id}`);
@@ -132,7 +112,39 @@ export const useWebSocket = ({ channelId, onMessageReceived, user, onCallSignal 
                 console.log('WebSocket client deactivated');
             }
         };
-    }, [channelId, user]); // Only reconnect when channelId or user changes, not when callbacks change
+    }, [user]); // Only reconnect when user changes
+
+    // Message channel subscription - change when channelId changes
+    useEffect(() => {
+        if (!channelId || !clientRef.current?.connected) return;
+
+        console.log(`📬 Subscribing to /topic/messages/${channelId}`);
+
+        // Subscribe to channel
+        subscriptionRef.current = clientRef.current.subscribe(
+            `/topic/messages/${channelId}`,
+            (message) => {
+                console.log('📩 Received WebSocket message:', message.body);
+                try {
+                    const backendMessage = JSON.parse(message.body);
+                    // Transform backend message to frontend Message type
+                    const transformedMessage = transformBackendMessage(backendMessage);
+                    onMessageReceivedRef.current(transformedMessage);
+                } catch (error) {
+                    console.error('Error parsing message:', error);
+                }
+            }
+        );
+        console.log(`Subscribed to /topic/messages/${channelId}`);
+
+        // Cleanup: unsubscribe when channelId changes
+        return () => {
+            if (subscriptionRef.current) {
+                subscriptionRef.current.unsubscribe();
+                console.log(`Unsubscribed from /topic/messages/${channelId}`);
+            }
+        };
+    }, [channelId]); // Only change message subscription when channelId changes
 
     // Send call signaling message
     const sendSignalMessage = (message: SignalingMessage) => {
