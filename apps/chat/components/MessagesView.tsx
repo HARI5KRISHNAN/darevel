@@ -177,14 +177,23 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery }) => {
 
     // Handle incoming call signals
     const handleCallSignal = useCallback((signal: any) => {
-        console.log('Received call signal in MessagesView:', signal);
+        console.log('📞 Received call signal in MessagesView:', signal);
+        console.log('📞 Current user:', user?.id, user?.name);
+        console.log('📞 Available users:', availableUsers.length, availableUsers.map(u => `${u.name}(${u.id})`));
 
         if (signal.type === 'call-offer') {
+            console.log('📞 This is a call-offer signal');
+            console.log('📞 Looking for caller with ID:', signal.from);
+
             // Find the caller user
             const caller = availableUsers.find(u => u.id === signal.from);
+            console.log('📞 Found caller:', caller?.name, caller?.id);
+
             const receiver = user!;
+            console.log('📞 Receiver (current user):', receiver?.name, receiver?.id);
 
             if (caller && signal.offer) {
+                console.log('✅ Creating incoming call notification');
                 setIncomingCall({
                     type: signal.callType,
                     caller,
@@ -192,6 +201,11 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery }) => {
                     channelId: signal.channelId,
                     offer: signal.offer,
                 });
+            } else {
+                console.error('❌ Cannot create incoming call:');
+                console.error('   - Caller found:', !!caller);
+                console.error('   - Offer present:', !!signal.offer);
+                console.error('   - Signal:', signal);
             }
         }
 
@@ -322,17 +336,21 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery }) => {
 
     const fetchRegisteredUsers = async () => {
         try {
+            console.log('👥 Fetching registered users...');
             // Use Auth Service to fetch users (port 8081)
             const AUTH_API_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:8081';
             const response = await fetch(`${AUTH_API_URL}/api/auth/users`);
             const data = await response.json();
+            console.log('👥 Received user data:', data);
             // Handle Java backend ApiResponse wrapper: data.data or data
             const users = data.data || data;
+            console.log('👥 Parsed users:', users);
             // Filter out current user
             const otherUsers = Array.isArray(users) ? users.filter((u: User) => u.id !== user?.id) : [];
+            console.log('👥 Available users (excluding current):', otherUsers.map(u => `${u.name}(${u.id})`));
             setAvailableUsers(otherUsers);
         } catch (error) {
-            console.error('Error fetching users:', error);
+            console.error('❌ Error fetching users:', error);
             setAvailableUsers([]);
         }
     };
