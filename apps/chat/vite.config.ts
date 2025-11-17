@@ -1,16 +1,15 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import basicSsl from '@vitejs/plugin-basic-ssl';
 
 export default defineConfig({
-  plugins: [react(), basicSsl()],
+  plugins: [react()],
   define: {
     global: 'globalThis',
   },
   server: {
     host: "chat.darevel.local",
     port: 3003,
-    https: true,
+    https: false, // Disabled - requires Vite 6.x for basicSsl plugin
     allowedHosts: ["chat.darevel.local"],
   }
 });
