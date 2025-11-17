@@ -24,6 +24,10 @@ export const useWebSocket = ({ channelId, onMessageReceived, user, onCallSignal 
         const WS_URL = import.meta.env.VITE_WEBSOCKET_URL || 'http://localhost:8082';
         const socketUrl = `${WS_URL}/ws`;
 
+        console.log('🔌 Initializing WebSocket connection...');
+        console.log('🔌 User:', user?.id, user?.name);
+        console.log('🔌 Has onCallSignal handler:', !!onCallSignal);
+
         // Create STOMP client
         const client = new Client({
             webSocketFactory: () => new SockJS(socketUrl),
