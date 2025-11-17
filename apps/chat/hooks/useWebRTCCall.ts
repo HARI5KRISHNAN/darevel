@@ -99,14 +99,26 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
         channelId: string,
         callType: CallType
     ) => {
-        if (!user) return;
+        console.log('🎬 ============ STARTING CALL ============');
+        console.log('🎬 Caller:', user?.id, user?.name);
+        console.log('🎬 Receiver:', receiver.id, receiver.name);
+        console.log('🎬 Channel ID:', channelId);
+        console.log('🎬 Call type:', callType);
+
+        if (!user) {
+            console.error('❌ Cannot start call: no user');
+            return;
+        }
 
         try {
             // Check if mediaDevices API is available
+            console.log('🎬 Checking media devices API...');
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 throw new Error('Your browser does not support camera/microphone access. Please use Chrome, Firefox, or Edge, and ensure the app is served over HTTPS or localhost.');
             }
+            console.log('✓ Media devices API available');
 
+            console.log('🎬 Setting call state to calling...');
             setCallState('calling');
             setCurrentCall({
                 type: callType,
@@ -116,10 +128,12 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
             });
 
             // Get user media
+            console.log('🎬 Requesting user media...');
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: true,
                 video: callType === 'video',
             });
+            console.log('✓ Got user media stream:', stream.id);
 
             setLocalStream(stream);
             if (localVideoRef.current) {
@@ -127,19 +141,28 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
             }
 
             // Initialize peer connection
+            console.log('🎬 Initializing peer connection...');
             const pc = initializePeerConnection(receiver);
+            console.log('✓ Peer connection initialized');
 
             // Add local tracks to peer connection
+            console.log('🎬 Adding local tracks to peer connection...');
             stream.getTracks().forEach((track) => {
+                console.log('  Adding track:', track.kind, track.id);
                 pc.addTrack(track, stream);
             });
+            console.log('✓ Local tracks added');
 
             // Create offer
+            console.log('🎬 Creating offer...');
             const offer = await pc.createOffer();
+            console.log('✓ Offer created:', offer.type);
             await pc.setLocalDescription(offer);
+            console.log('✓ Local description set');
 
             // Send offer to receiver via WebSocket
             if (sendSignal) {
+                console.log('🎬 Sending call-offer signal...');
                 sendSignal({
                     type: 'call-offer',
                     from: user.id,
@@ -148,13 +171,19 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
                     callType,
                     offer,
                 });
-                console.log('Call offer sent:', { receiver, callType });
+                console.log('✅ Call offer sent successfully!');
+            } else {
+                console.error('❌ No sendSignal function available!');
             }
 
         } catch (error) {
-            console.error('Error starting call:', error);
+            console.error('❌ ============ ERROR STARTING CALL ============');
+            console.error('Error details:', error);
+            console.error('Error name:', error instanceof Error ? error.name : 'unknown');
+            console.error('Error message:', error instanceof Error ? error.message : 'unknown');
             const errorMessage = error instanceof Error ? error.message : 'Failed to start call. Please check camera/microphone permissions.';
             alert(errorMessage);
+            console.log('🎬 Ending call due to error...');
             endCall();
         }
     }, [user, initializePeerConnection, sendSignal]);

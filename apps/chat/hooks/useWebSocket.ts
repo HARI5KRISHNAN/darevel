@@ -148,14 +148,26 @@ export const useWebSocket = ({ channelId, onMessageReceived, user, onCallSignal 
 
     // Send call signaling message
     const sendSignalMessage = (message: SignalingMessage) => {
-        console.log('📤 Attempting to send call signal:', message);
+        console.log('📤 ============ SENDING CALL SIGNAL ============');
+        console.log('📤 Signal type:', message.type);
+        console.log('📤 From user:', message.from);
+        console.log('📤 To user:', message.to);
+        console.log('📤 Channel ID:', message.channelId);
+        console.log('📤 Call type:', message.callType);
+        console.log('📤 Has offer:', !!message.offer);
+        console.log('📤 Has answer:', !!message.answer);
+        console.log('📤 Has candidate:', !!message.candidate);
         console.log('📤 Destination:', `/app/call-signal/${message.to}`);
         console.log('📤 WebSocket connected:', clientRef.current?.connected);
+
+        const signalBody = JSON.stringify(message);
+        console.log('📤 Signal body length:', signalBody.length, 'bytes');
+        console.log('📤 Full signal:', signalBody);
 
         if (clientRef.current && clientRef.current.connected) {
             clientRef.current.publish({
                 destination: `/app/call-signal/${message.to}`,
-                body: JSON.stringify(message),
+                body: signalBody,
             });
             console.log('✅ Call signal sent successfully');
         } else {
