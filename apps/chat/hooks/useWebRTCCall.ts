@@ -53,10 +53,13 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
 
     // Initialize peer connection
     const initializePeerConnection = useCallback((receiver: User, channelId: string) => {
+        console.log('🔧 Creating RTCPeerConnection...');
         const pc = new RTCPeerConnection(iceServers);
+        console.log('🔧 RTCPeerConnection created');
 
         // Handle ICE candidates
         pc.onicecandidate = (event) => {
+            console.log('🧊 onicecandidate fired, candidate:', !!event.candidate);
             if (event.candidate && sendSignal && user) {
                 console.log('🧊 Sending ICE candidate:', event.candidate);
                 sendSignal({
@@ -66,6 +69,8 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
                     channelId: channelId,
                     candidate: event.candidate.toJSON(),
                 });
+            } else if (!event.candidate) {
+                console.log('🧊 ICE gathering complete (null candidate)');
             }
         };
 
@@ -167,10 +172,23 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
 
             // Create offer
             console.log('🎬 Creating offer...');
-            const offer = await pc.createOffer();
-            console.log('✓ Offer created:', offer.type);
-            await pc.setLocalDescription(offer);
-            console.log('✓ Local description set');
+            console.log('🎬 Peer connection state:', pc.connectionState);
+            console.log('🎬 Signaling state:', pc.signalingState);
+            console.log('🎬 ICE gathering state:', pc.iceGatheringState);
+            console.log('🎬 ICE connection state:', pc.iceConnectionState);
+
+            try {
+                const offer = await pc.createOffer();
+                console.log('✓ Offer created:', offer.type);
+                console.log('✓ Offer SDP length:', offer.sdp?.length || 0, 'chars');
+
+                await pc.setLocalDescription(offer);
+                console.log('✓ Local description set');
+                console.log('✓ Signaling state after setLocalDescription:', pc.signalingState);
+            } catch (offerError) {
+                console.error('❌ Error creating or setting offer:', offerError);
+                throw offerError;
+            }
 
             // Send offer to receiver via WebSocket
             if (sendSignal) {
