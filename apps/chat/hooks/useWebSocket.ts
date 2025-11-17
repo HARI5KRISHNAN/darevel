@@ -61,19 +61,24 @@ export const useWebSocket = ({ channelId, onMessageReceived, user, onCallSignal 
 
             // Subscribe to call signaling for this user
             if (user && onCallSignal && client.connected) {
+                console.log(`🔔 Subscribing to /topic/call-signal/${user.id} for user: ${user.name}`);
                 callSubscriptionRef.current = client.subscribe(
                     `/topic/call-signal/${user.id}`,
                     (message) => {
-                        console.log('📞 Received call signal:', message.body);
+                        console.log('📞 RAW call signal received:', message.body);
                         try {
                             const signal: SignalingMessage = JSON.parse(message.body);
+                            console.log('📞 PARSED call signal:', signal);
+                            console.log('📞 Signal type:', signal.type, 'From:', signal.from, 'To:', signal.to);
                             onCallSignal(signal);
                         } catch (error) {
-                            console.error('Error parsing call signal:', error);
+                            console.error('❌ Error parsing call signal:', error);
                         }
                     }
                 );
-                console.log(`Subscribed to /topic/call-signal/${user.id}`);
+                console.log(`✅ Successfully subscribed to /topic/call-signal/${user.id}`);
+            } else {
+                console.log(`⚠️ Not subscribing to call signals. user: ${!!user}, onCallSignal: ${!!onCallSignal}, connected: ${client.connected}`);
             }
         };
 
@@ -112,14 +117,18 @@ export const useWebSocket = ({ channelId, onMessageReceived, user, onCallSignal 
 
     // Send call signaling message
     const sendSignalMessage = (message: SignalingMessage) => {
+        console.log('📤 Attempting to send call signal:', message);
+        console.log('📤 Destination:', `/app/call-signal/${message.to}`);
+        console.log('📤 WebSocket connected:', clientRef.current?.connected);
+
         if (clientRef.current && clientRef.current.connected) {
             clientRef.current.publish({
                 destination: `/app/call-signal/${message.to}`,
                 body: JSON.stringify(message),
             });
-            console.log('📤 Sent call signal:', message);
+            console.log('✅ Call signal sent successfully');
         } else {
-            console.error('Cannot send call signal - WebSocket not connected');
+            console.error('❌ Cannot send call signal - WebSocket not connected');
         }
     };
 

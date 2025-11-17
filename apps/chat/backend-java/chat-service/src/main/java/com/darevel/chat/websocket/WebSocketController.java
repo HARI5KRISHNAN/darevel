@@ -35,7 +35,9 @@ public class WebSocketController {
     public Object handleCallSignal(
             @DestinationVariable Long toUserId,
             Object signalMessage) {
-        log.info("Relaying call signal to user: {}", toUserId);
+        log.info("📞 Received call signal for user {}", toUserId);
+        log.info("📞 Signal content: {}", signalMessage);
+        log.info("📞 Broadcasting to /topic/call-signal/{}", toUserId);
         // Simply relay the message to the recipient
         return signalMessage;
     }
