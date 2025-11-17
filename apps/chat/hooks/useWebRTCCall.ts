@@ -178,10 +178,25 @@ export const useWebRTCCall = ({ user, onIncomingCall, sendSignal }: UseWebRTCCal
             console.log('🎬 ICE connection state:', pc.iceConnectionState);
 
             try {
-                const offer = await pc.createOffer();
+                console.log('🎬 Calling pc.createOffer() with options...');
+                const offerOptions = {
+                    offerToReceiveAudio: true,
+                    offerToReceiveVideo: callType === 'video',
+                };
+                console.log('🎬 Offer options:', offerOptions);
+
+                // Add a timeout to detect if createOffer hangs
+                const offerPromise = pc.createOffer(offerOptions);
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('createOffer timeout after 10 seconds')), 10000)
+                );
+
+                console.log('🎬 Waiting for offer...');
+                const offer = await Promise.race([offerPromise, timeoutPromise]) as RTCSessionDescriptionInit;
                 console.log('✓ Offer created:', offer.type);
                 console.log('✓ Offer SDP length:', offer.sdp?.length || 0, 'chars');
 
+                console.log('🎬 Setting local description...');
                 await pc.setLocalDescription(offer);
                 console.log('✓ Local description set');
                 console.log('✓ Signaling state after setLocalDescription:', pc.signalingState);
