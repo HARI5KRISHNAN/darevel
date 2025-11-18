@@ -4,6 +4,7 @@ com\darevel\chat\dto\AuthRequest.class
 com\darevel\chat\dto\AuthResponse$UserDTO$UserDTOBuilder.class
 com\darevel\chat\dto\AuthRequest$AuthRequestBuilder.class
 com\darevel\chat\controller\AuthController$ErrorResponse.class
+com\darevel\chat\controller\AuthController$SuccessResponse.class
 com\darevel\chat\repository\UserRepository.class
 com\darevel\chat\model\User.class
 com\darevel\chat\dto\AuthResponse$AuthResponseBuilder.class

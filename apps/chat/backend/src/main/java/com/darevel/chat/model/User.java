@@ -35,8 +35,19 @@ public class User {
     private boolean active = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private Long createdAt = System.currentTimeMillis();
+    private Long createdAt;
 
     @Column(name = "updated_at")
-    private Long updatedAt = System.currentTimeMillis();
+    private Long updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = System.currentTimeMillis();
+        updatedAt = System.currentTimeMillis();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = System.currentTimeMillis();
+    }
 }
