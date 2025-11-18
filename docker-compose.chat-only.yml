@@ -1,0 +1,55 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: darevel-postgres
+    environment:
+      POSTGRES_USER: darvel_suite
+      POSTGRES_PASSWORD: darvel_suite
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/init-databases-chat.sql:/docker-entrypoint-initdb.d/01-init-databases.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - darevel-network
+
+  # Chat Backend Service
+  chat-backend:
+    build:
+      context: .
+      dockerfile: ./apps/chat/backend/Dockerfile
+    container_name: darevel-chat-backend
+    ports:
+      - "8081:8081"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - POSTGRES_USER=darvel_suite
+      - POSTGRES_PASSWORD=darvel_suite
+      - POSTGRES_DB=darvel_suite
+      - SERVER_PORT=8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - darevel-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/api/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  darevel-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

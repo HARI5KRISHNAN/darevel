@@ -18,36 +18,39 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
     setError('');
     setLoading(true);
 
-    // Use Auth Service (port 8081)
-    const AUTH_API_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:8081';
-    const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-
     try {
-      const body = isLogin
-        ? { email, password }
-        : { name, email, password };
-
-      const response = await fetch(`${AUTH_API_URL}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Authentication failed');
+      if (!email || !password) {
+        throw new Error('Email and password required');
+      }
+      if (!isLogin && !name) {
+        throw new Error('Name required for signup');
       }
 
-      // Handle Java backend ApiResponse wrapper
-      const authResponse = data.data || data;
-      const user: User = authResponse.user;
+      // Register/login user with Chat backend on port 8081
+      const BACKEND_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:8081';
+      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+
+      const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          name,
+          password,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const user: User = data.data || data;
 
       // Store user and token in localStorage
       localStorage.setItem('whooper_user', JSON.stringify(user));
-      if (authResponse.token) {
-        localStorage.setItem('whooper_token', authResponse.token);
-      }
+      localStorage.setItem('whooper_token', 'test-token-' + user.id);
 
       onLogin(user);
 
@@ -161,10 +164,13 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
                 type="button"
                 onClick={async () => {
                   if (confirm('Clear all users and messages?')) {
-                    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-                    await fetch(`${BACKEND_URL}/api/auth/users`, { method: 'DELETE' });
-                    await fetch(`${BACKEND_URL}/api/chat/messages`, { method: 'DELETE' });
-                    alert('All data cleared!');
+                    const AUTH_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:8081';
+                    try {
+                      await fetch(`${AUTH_URL}/api/auth/users`, { method: 'DELETE' });
+                      alert('All data cleared!');
+                    } catch (err) {
+                      alert(`Error clearing data: ${err}`);
+                    }
                   }
                 }}
                 className="flex-1 py-1.5 px-3 bg-red-900/30 border border-red-700 text-red-400 text-xs rounded hover:bg-red-900/50 transition-colors"
@@ -174,10 +180,19 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
               <button
                 type="button"
                 onClick={async () => {
-                  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-                  const res = await fetch(`${BACKEND_URL}/api/auth/users`);
-                  const data = await res.json();
-                  alert(`Total users: ${data.count}\n\n${data.users.map(u => `${u.name} (${u.email})`).join('\n')}`);
+                  const AUTH_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:8081';
+                  try {
+                    const res = await fetch(`${AUTH_URL}/api/auth/users`);
+                    if (!res.ok) {
+                      alert(`Error: ${res.status} ${res.statusText}`);
+                      return;
+                    }
+                    const users = await res.json();
+                    const userList = Array.isArray(users) ? users : (users.data || []);
+                    alert(`Total users: ${userList.length}\n\n${userList.map((u: any) => `${u.name} (${u.email})`).join('\n')}`);
+                  } catch (err) {
+                    alert(`Error: ${err}`);
+                  }
                 }}
                 className="flex-1 py-1.5 px-3 bg-background-main border border-border-color text-text-secondary text-xs rounded hover:bg-input-field transition-colors"
               >

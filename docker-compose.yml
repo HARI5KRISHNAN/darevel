@@ -1,16 +1,147 @@
-# Darevel Suite - Docker Compose
-# Currently minimal - add services as needed
-
 version: '3.8'
 
 services:
-  # Add services here as needed
-  # Example: databases, caching, message queues, etc.
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: darevel-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - darevel-network
 
-# Uncomment when services are added
-# volumes:
-#   data:
+  # Chat Backend Service
+  chat-backend:
+    build:
+      context: .
+      dockerfile: ./apps/chat/backend/Dockerfile
+    container_name: darevel-chat-backend
+    ports:
+      - "8081:8081"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=darevel_chat
+      - SERVER_PORT=8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - darevel-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/api/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-# Uncomment when custom networks are needed
-# networks:
-#   darevel:
+  # Mail Backend Service
+  mail-backend:
+    build:
+      context: .
+      dockerfile: ./apps/mail/backend/Dockerfile
+    container_name: darevel-mail-backend
+    ports:
+      - "8083:8083"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=darevel_mail
+      - SERVER_PORT=8083
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - darevel-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/api/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Excel Backend Service
+  excel-backend:
+    build:
+      context: ./apps/excel/backend
+      dockerfile: Dockerfile
+    container_name: darevel-excel-backend
+    ports:
+      - "8082:8082"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=darevel_sheet
+      - SERVER_PORT=8082
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - darevel-network
+
+  # Slides Backend Service
+  slides-backend:
+    build:
+      context: ./apps/slides/backend
+      dockerfile: Dockerfile
+    container_name: darevel-slides-backend
+    ports:
+      - "8084:8084"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=darevel_slides
+      - SERVER_PORT=8084
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - darevel-network
+
+  # Suite Backend Service
+  suite-backend:
+    build:
+      context: ./apps/suite/backend
+      dockerfile: Dockerfile
+    container_name: darevel-suite-backend
+    ports:
+      - "8085:8085"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=darevel_dashboard
+      - SERVER_PORT=8085
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - darevel-network
+
+networks:
+  darevel-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

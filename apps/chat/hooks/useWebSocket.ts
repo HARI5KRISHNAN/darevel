@@ -63,19 +63,38 @@ export const useWebSocket = ({ channelId, onMessageReceived, user, onCallSignal 
             // Subscribe to call signaling for this user (always active)
             if (user && onCallSignalRef.current && client.connected) {
                 console.log(`🔔 Subscribing to /topic/call-signal/${user.id} for user: ${user.name}`);
+                console.log(`🔔 User ID Type: ${typeof user.id}, Value: ${user.id}`);
                 callSubscriptionRef.current = client.subscribe(
                     `/topic/call-signal/${user.id}`,
                     (message) => {
-                        console.log('📞 RAW call signal received:', message.body);
+                        console.log('========================================');
+                        console.log('📞 CALL SIGNAL RECEIVED ON FRONTEND');
+                        console.log('========================================');
+                        console.log('📞 Raw message body received');
+                        console.log('📞 Message body:', message.body);
+                        console.log('📞 Receiver user ID:', user.id, typeof user.id);
+                        console.log('📞 Receiver user name:', user.name);
                         try {
                             const signal: SignalingMessage = JSON.parse(message.body);
-                            console.log('📞 PARSED call signal:', signal);
-                            console.log('📞 Signal type:', signal.type, 'From:', signal.from, 'To:', signal.to);
+                            console.log('📞 ✅ PARSED call signal successfully');
+                            console.log('📞 Signal type:', signal.type);
+                            console.log('📞 From user:', signal.from);
+                            console.log('📞 To user:', signal.to);
+                            console.log('📞 Channel ID:', signal.channelId);
+                            console.log('📞 Call Type:', signal.callType);
+                            console.log('📞 Has Offer:', !!signal.offer);
+                            console.log('📞 Has Answer:', !!signal.answer);
+                            console.log('📞 Has ICE Candidate:', !!signal.candidate);
+                            console.log('========================================');
                             if (onCallSignalRef.current) {
+                                console.log('📞 Calling onCallSignal handler...');
                                 onCallSignalRef.current(signal);
+                            } else {
+                                console.warn('⚠️  onCallSignal handler not available!');
                             }
                         } catch (error) {
                             console.error('❌ Error parsing call signal:', error);
+                            console.error('❌ Raw body:', message.body);
                         }
                     }
                 );
