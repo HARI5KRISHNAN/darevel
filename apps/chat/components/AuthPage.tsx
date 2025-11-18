@@ -46,11 +46,15 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
       }
 
       const data = await response.json();
-      const user: User = data.data || data;
+
+      // Extract token and user from response
+      const authResponse = data.data || data;
+      const token = authResponse.token;
+      const user: User = authResponse.user;
 
       // Store user and token in localStorage
       localStorage.setItem('whooper_user', JSON.stringify(user));
-      localStorage.setItem('whooper_token', 'test-token-' + user.id);
+      localStorage.setItem('whooper_token', token);
 
       onLogin(user);
 
