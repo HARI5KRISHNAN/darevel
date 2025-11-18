@@ -23,12 +23,15 @@ public class AuthService {
         }
 
         // Create new user (in production, use bcrypt to hash password)
+        Long currentTime = System.currentTimeMillis();
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
                 .password(request.getPassword()) // TODO: Hash this in production
                 .avatar("https://ui-avatars.com/api/?name=" + encodeURIComponent(request.getName()) + "&background=random")
                 .active(true)
+                .createdAt(currentTime)
+                .updatedAt(currentTime)
                 .build();
 
         User savedUser = userRepository.save(user);
