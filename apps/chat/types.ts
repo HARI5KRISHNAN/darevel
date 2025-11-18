@@ -36,7 +36,7 @@ export interface Message {
   reactions?: { [emoji: string]: number[] };
 }
 
-export type View = 'home' | 'messages' | 'permission' | 'status' | 'settings' | 'incidents';
+export type View = 'home' | 'messages' | 'permission' | 'status' | 'incidents';
 
 export interface User {
   id: number;
