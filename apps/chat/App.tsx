@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { View, User, Project } from './types';
 import NavigationSidebar from './components/NavigationSidebar';
 import RightSidebar from './components/RightSidebar';
-import SettingsView from './components/SettingsView';
+import ProfileSettingsModal from './components/ProfileSettingsModal';
 import PodStatusView from './components/PodStatusView';
 import KanbanBoard from './components/KanbanBoard';
 import MessagesView from './components/MessagesView';
@@ -46,7 +46,8 @@ const App: React.FC = () => {
 
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
-  
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
   const { pods, connectionStatus } = useRealTimeK8s();
 
 
@@ -81,7 +82,10 @@ const App: React.FC = () => {
   
   const handleUpdateUser = (updatedUser: User) => {
     setUser(updatedUser);
-    alert('Profile updated successfully!');
+  };
+
+  const handleOpenProfileSettings = () => {
+    setIsProfileModalOpen(true);
   };
   
   const handleSelectProject = (projectId: string) => {
@@ -171,8 +175,6 @@ const App: React.FC = () => {
         return <PodStatusView pods={pods} connectionStatus={connectionStatus} />;
       case 'incidents':
         return <IncidentDashboard />;
-      case 'settings':
-        return user ? <SettingsView user={user} onUpdateUser={handleUpdateUser} /> : null;
       default:
         return <KanbanBoard projects={projects} onSelectProject={handleSelectProject} onAddProject={handleOpenCreateProject} />;
     }
@@ -194,6 +196,7 @@ const App: React.FC = () => {
         userSearchQuery={userSearchQuery}
         onUserSearchChange={handleUserSearchChange}
         onLogout={handleLogout}
+        onProfileClick={handleOpenProfileSettings}
       />
       <div className="flex-1 flex flex-col min-w-0">
         <main className="flex-1 flex min-w-0 overflow-y-auto no-scrollbar">
@@ -208,6 +211,14 @@ const App: React.FC = () => {
             onSaveProject={handleSaveProject}
             users={availableUsers}
             projectToEdit={projectToEdit}
+        />
+      )}
+      {user && (
+        <ProfileSettingsModal
+          user={user}
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          onUpdateUser={handleUpdateUser}
         />
       )}
     </div>

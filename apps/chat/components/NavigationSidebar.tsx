@@ -43,9 +43,10 @@ interface NavigationSidebarProps {
     userSearchQuery: string;
     onUserSearchChange: (query: string) => void;
     onLogout?: () => void;
+    onProfileClick?: () => void;
 }
 
-const NavigationSidebar: React.FC<NavigationSidebarProps> = ({ user, activeView, onNavigate, isCollapsed, onToggleCollapse, theme, onToggleTheme, userSearchQuery, onUserSearchChange, onLogout }) => {
+const NavigationSidebar: React.FC<NavigationSidebarProps> = ({ user, activeView, onNavigate, isCollapsed, onToggleCollapse, theme, onToggleTheme, userSearchQuery, onUserSearchChange, onLogout, onProfileClick }) => {
   return (
     <nav className={`bg-background-main p-4 flex flex-col gap-4 border-r border-border-color transition-all duration-300 ease-in-out relative ${isCollapsed ? 'w-20' : 'w-72'}`}>
         
@@ -86,7 +87,6 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({ user, activeView,
                     <NavLink icon={<PermissionIcon className="w-5 h-5" />} label="Permission" active={activeView === 'permission'} onClick={() => onNavigate('permission')} isCollapsed={isCollapsed} />
                     <NavLink icon={<ServerIcon className="w-5 h-5" />} label="Pod Status" active={activeView === 'status'} onClick={() => onNavigate('status')} isCollapsed={isCollapsed} />
                     <NavLink icon={<ClipboardListIcon className="w-5 h-5" />} label="Incidents" active={activeView === 'incidents'} onClick={() => onNavigate('incidents')} isCollapsed={isCollapsed} />
-                    <NavLink icon={<SettingsIcon className="w-5 h-5" />} label="Settings" active={activeView === 'settings'} onClick={() => onNavigate('settings')} isCollapsed={isCollapsed} />
                 </div>
             </div>
         </div>
@@ -111,18 +111,24 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = ({ user, activeView,
 
         {user && (
             <div className="flex-shrink-0 border-t border-border-color pt-4">
-                <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
-                    <img src={user.avatar} alt={user.name} className="w-9 h-9 rounded-full object-cover" />
-                    {!isCollapsed && (
-                        <div className="flex-1 overflow-hidden">
-                            <p className="font-semibold text-sm text-text-primary truncate">{user.name}</p>
-                            <p className="text-xs text-text-secondary truncate">{user.email}</p>
-                        </div>
-                    )}
-                    {onLogout && (
+                <div className={`flex items-center gap-2 ${isCollapsed ? 'justify-center' : ''}`}>
+                    <button
+                        onClick={onProfileClick}
+                        className="flex items-center gap-3 flex-1 rounded-lg hover:bg-background-panel p-2 transition-colors group"
+                        title="View Profile Settings"
+                    >
+                        <img src={user.avatar} alt={user.name} className="w-9 h-9 rounded-full object-cover ring-2 ring-transparent group-hover:ring-accent transition-all" />
+                        {!isCollapsed && (
+                            <div className="flex-1 overflow-hidden text-left">
+                                <p className="font-semibold text-sm text-text-primary truncate group-hover:text-accent transition-colors">{user.name}</p>
+                                <p className="text-xs text-text-secondary truncate">{user.email}</p>
+                            </div>
+                        )}
+                    </button>
+                    {onLogout && !isCollapsed && (
                         <button
                             onClick={onLogout}
-                            className="p-2 rounded-md hover:bg-background-panel text-text-secondary hover:text-red-400 transition-colors"
+                            className="p-2 rounded-md hover:bg-background-panel text-text-secondary hover:text-red-400 transition-colors shrink-0"
                             title="Logout"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
