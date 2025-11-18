@@ -1,7 +1,5 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
-import { redirect } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
   User,
@@ -14,9 +12,6 @@ import {
   Mail,
   FileSpreadsheet,
   Presentation,
-  FolderOpen,
-  Bell,
-  Lock,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,11 +28,17 @@ interface AppStatus {
 }
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
+  // Mock user data (replace with real auth later)
+  const mockUser = {
+    name: "Demo User",
+    email: "demo@darevel.com",
+    image: null,
+  };
+
   const [appStatuses, setAppStatuses] = useState<AppStatus[]>([
     {
       name: "Chat",
-      port: 3002,
+      port: 3003,
       status: "checking",
       icon: MessageSquare,
       color: "from-blue-500 to-cyan-500",
@@ -45,7 +46,7 @@ export default function DashboardPage() {
     },
     {
       name: "Mail",
-      port: 3003,
+      port: 3008,
       status: "checking",
       icon: Mail,
       color: "from-red-500 to-orange-500",
@@ -61,44 +62,13 @@ export default function DashboardPage() {
     },
     {
       name: "Slides",
-      port: 3001,
+      port: 3000,
       status: "checking",
       icon: Presentation,
       color: "from-purple-500 to-pink-500",
       description: "Presentations",
     },
-    {
-      name: "Auth",
-      port: 3005,
-      status: "checking",
-      icon: Lock,
-      color: "from-indigo-500 to-purple-500",
-      description: "Authentication",
-    },
-    {
-      name: "Drive",
-      port: 3006,
-      status: "checking",
-      icon: FolderOpen,
-      color: "from-yellow-500 to-orange-500",
-      description: "File storage",
-    },
-    {
-      name: "Notify",
-      port: 3007,
-      status: "checking",
-      icon: Bell,
-      color: "from-blue-500 to-indigo-500",
-      description: "Notifications",
-    },
   ]);
-
-  // Check authentication
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      redirect("/api/auth/signin");
-    }
-  }, [status]);
 
   // Check app health status
   useEffect(() => {
@@ -127,40 +97,10 @@ export default function DashboardPage() {
       }
     };
 
-    if (status === "authenticated") {
-      appStatuses.forEach((app) => {
-        checkAppStatus(app);
-      });
-    }
-  }, [status]);
-
-  // Extract user roles from Keycloak token
-  const getUserRoles = (): string[] => {
-    if (!session?.accessToken) return [];
-
-    try {
-      const payload = JSON.parse(atob(session.accessToken.split(".")[1]));
-      return payload.realm_access?.roles || [];
-    } catch (error) {
-      return [];
-    }
-  };
-
-  const userRoles = getUserRoles();
-  const isAdmin = userRoles.includes("admin");
-
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600 mb-4" />
-          <p className="text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!session) return null;
+    appStatuses.forEach((app) => {
+      checkAppStatus(app);
+    });
+  }, []);
 
   // Get user initials for avatar
   const getInitials = (name?: string | null) => {
@@ -194,13 +134,13 @@ export default function DashboardPage() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={session.user?.image || undefined} />
+                  <AvatarImage src={mockUser.image || undefined} />
                   <AvatarFallback className="bg-blue-600 text-white text-sm">
-                    {getInitials(session.user?.name)}
+                    {getInitials(mockUser.name)}
                   </AvatarFallback>
                 </Avatar>
                 <span className="text-sm font-medium text-gray-700 hidden sm:block">
-                  {session.user?.name || session.user?.email}
+                  {mockUser.name || mockUser.email}
                 </span>
               </div>
 
@@ -215,13 +155,13 @@ export default function DashboardPage() {
               </Button>
 
               <Button
-                onClick={() => signOut({ callbackUrl: "/api/auth/signin" })}
+                onClick={() => window.location.href = "/"}
                 variant="outline"
                 size="sm"
                 className="gap-2"
               >
                 <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Sign Out</span>
+                <span className="hidden sm:inline">Home</span>
               </Button>
             </div>
           </div>
@@ -236,46 +176,34 @@ export default function DashboardPage() {
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16 border-4 border-white/20">
-                  <AvatarImage src={session.user?.image || undefined} />
+                  <AvatarImage src={mockUser.image || undefined} />
                   <AvatarFallback className="bg-white/20 text-white text-xl font-semibold">
-                    {getInitials(session.user?.name)}
+                    {getInitials(mockUser.name)}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <h2 className="text-2xl font-bold mb-1">
-                    Welcome back, {session.user?.name?.split(" ")[0] || "User"}!
+                    Welcome back, {mockUser.name?.split(" ")[0] || "User"}!
                   </h2>
                   <p className="text-blue-100 flex items-center gap-2">
                     <User className="h-4 w-4" />
-                    {session.user?.email}
+                    {mockUser.email}
                   </p>
                 </div>
               </div>
 
               {/* Role Badges */}
               <div className="flex flex-col gap-2">
-                {isAdmin ? (
-                  <Badge variant="secondary" className="bg-yellow-400 text-yellow-900 gap-1">
-                    <Shield className="h-3 w-3" />
-                    Admin
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="bg-white/20 text-white gap-1">
-                    <User className="h-3 w-3" />
-                    User
-                  </Badge>
-                )}
-                {userRoles.filter((role) => role !== "admin" && role !== "user").map((role) => (
-                  <Badge key={role} variant="outline" className="bg-white/10 text-white border-white/30">
-                    {role}
-                  </Badge>
-                ))}
+                <Badge variant="secondary" className="bg-white/20 text-white gap-1">
+                  <User className="h-3 w-3" />
+                  Demo Mode
+                </Badge>
               </div>
             </div>
           </div>
 
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="text-center p-4 rounded-lg bg-green-50 border border-green-200">
                 <CheckCircle2 className="h-8 w-8 text-green-600 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-green-900">{onlineApps}/{totalApps}</p>
@@ -283,13 +211,8 @@ export default function DashboardPage() {
               </div>
               <div className="text-center p-4 rounded-lg bg-blue-50 border border-blue-200">
                 <Shield className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-blue-900">SSO Active</p>
-                <p className="text-sm text-blue-700">Single Sign-On</p>
-              </div>
-              <div className="text-center p-4 rounded-lg bg-purple-50 border border-purple-200">
-                <User className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-purple-900">{userRoles.length}</p>
-                <p className="text-sm text-purple-700">Roles Assigned</p>
+                <p className="text-2xl font-bold text-blue-900">No Auth</p>
+                <p className="text-sm text-blue-700">Testing Mode</p>
               </div>
             </div>
           </CardContent>
@@ -299,11 +222,11 @@ export default function DashboardPage() {
         <div className="mb-4">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Applications</h2>
           <p className="text-gray-600 mb-6">
-            Access all Darevel productivity apps with single sign-on
+            Access all Darevel productivity apps
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {appStatuses.map((app) => {
             const Icon = app.icon;
             return (
@@ -366,10 +289,10 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2 text-gray-600">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <span>System Status: All services operational</span>
+                <span>System Status: Testing without authentication</span>
               </div>
               <div className="text-gray-500">
-                Authenticated via Keycloak SSO
+                Auth will be integrated later
               </div>
             </div>
           </CardContent>

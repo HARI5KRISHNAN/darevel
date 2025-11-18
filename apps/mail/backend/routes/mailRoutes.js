@@ -2,7 +2,7 @@ import express from 'express';
 import db from '../config/db.js';
 import { sendMail } from '../services/mailService.js';
 import { fetchImapEmails } from '../services/imapService.js';
-import { authenticateToken } from '../middleware/authMiddleware.js';
+
 
 // helper to read username/email from Keycloak token
 function getUsername(req) {
@@ -15,7 +15,7 @@ function getUsername(req) {
 const router = express.Router();
 
 // get inbox for logged-in user
-router.get('/mail/inbox', authenticateToken, async (req, res) => {
+router.get('/mail/inbox', async (req, res) => {
   const user = getUsername(req);
   try {
     // Construct full email address
@@ -46,7 +46,7 @@ router.get('/mail/inbox', authenticateToken, async (req, res) => {
 });
 
 // get sent folder for logged-in user
-router.get('/mail/sent', authenticateToken, async (req, res) => {
+router.get('/mail/sent', async (req, res) => {
   const user = getUsername(req);
   try {
     const q = await db.query(
@@ -63,7 +63,7 @@ router.get('/mail/sent', authenticateToken, async (req, res) => {
 });
 
 // get spam folder for logged-in user
-router.get('/mail/spam', authenticateToken, async (req, res) => {
+router.get('/mail/spam', async (req, res) => {
   const user = getUsername(req);
   try {
     const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
@@ -83,7 +83,7 @@ router.get('/mail/spam', authenticateToken, async (req, res) => {
 });
 
 // get trash folder for logged-in user
-router.get('/mail/trash', authenticateToken, async (req, res) => {
+router.get('/mail/trash', async (req, res) => {
   const user = getUsername(req);
   try {
     const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
@@ -103,7 +103,7 @@ router.get('/mail/trash', authenticateToken, async (req, res) => {
 });
 
 // get starred/important emails for logged-in user
-router.get('/mail/important', authenticateToken, async (req, res) => {
+router.get('/mail/important', async (req, res) => {
   const user = getUsername(req);
   try {
     // Construct full email address
@@ -125,7 +125,7 @@ router.get('/mail/important', authenticateToken, async (req, res) => {
 });
 
 // get folder counts for sidebar
-router.get('/mail/counts', authenticateToken, async (req, res) => {
+router.get('/mail/counts', async (req, res) => {
   const user = getUsername(req);
   console.log(`📊 Fetching counts for user: ${user}`);
   try {
@@ -170,7 +170,7 @@ router.get('/mail/counts', authenticateToken, async (req, res) => {
 });
 
 // search
-router.get('/mail/search', authenticateToken, async (req, res) => {
+router.get('/mail/search', async (req, res) => {
   const user = getUsername(req);
   const qtext = req.query.q || '';
   try {
@@ -190,7 +190,7 @@ router.get('/mail/search', authenticateToken, async (req, res) => {
 // ========== DRAFT ENDPOINTS (MUST come before /mail/:id) ==========
 
 // Get all drafts for logged-in user
-router.get('/mail/drafts', authenticateToken, async (req, res) => {
+router.get('/mail/drafts', async (req, res) => {
   const user = getUsername(req);
   console.log(`📝 GET /mail/drafts requested by user: ${user}`);
   try {
@@ -215,7 +215,7 @@ router.get('/mail/drafts', authenticateToken, async (req, res) => {
 });
 
 // Get specific draft by ID
-router.get('/mail/drafts/:id', authenticateToken, async (req, res) => {
+router.get('/mail/drafts/:id', async (req, res) => {
   const user = getUsername(req);
   const draftId = req.params.id;
 
@@ -242,7 +242,7 @@ router.get('/mail/drafts/:id', authenticateToken, async (req, res) => {
 });
 
 // Save/update draft
-router.post('/mail/drafts', authenticateToken, async (req, res) => {
+router.post('/mail/drafts', async (req, res) => {
   const user = getUsername(req);
   const { id, to, cc, subject, body, draftType, inReplyTo, attachments } = req.body;
 
@@ -284,7 +284,7 @@ router.post('/mail/drafts', authenticateToken, async (req, res) => {
 });
 
 // Delete draft
-router.delete('/mail/drafts/:id', authenticateToken, async (req, res) => {
+router.delete('/mail/drafts/:id', async (req, res) => {
   const user = getUsername(req);
   const draftId = req.params.id;
 
@@ -309,7 +309,7 @@ router.delete('/mail/drafts/:id', authenticateToken, async (req, res) => {
 });
 
 // get single mail (MUST come after specific string routes like /mail/sent, /mail/inbox, /mail/counts, /mail/search, /mail/drafts)
-router.get('/mail/:id', authenticateToken, async (req, res) => {
+router.get('/mail/:id', async (req, res) => {
   const user = getUsername(req);
   const id = req.params.id;
   try {
@@ -337,7 +337,7 @@ router.get('/mail/:id', authenticateToken, async (req, res) => {
 });
 
 // send mail
-router.post('/mail/send', authenticateToken, async (req, res) => {
+router.post('/mail/send', async (req, res) => {
   const user = getUsername(req);
   try {
     const { to, subject, text, html } = req.body;
@@ -356,7 +356,7 @@ router.post('/mail/send', authenticateToken, async (req, res) => {
 });
 
 // mark email as read
-router.patch('/mail/:id/read', authenticateToken, async (req, res) => {
+router.patch('/mail/:id/read', async (req, res) => {
   const user = getUsername(req);
   const id = req.params.id;
 
@@ -395,7 +395,7 @@ router.patch('/mail/:id/read', authenticateToken, async (req, res) => {
 });
 
 // mark email as unread
-router.patch('/mail/:id/unread', authenticateToken, async (req, res) => {
+router.patch('/mail/:id/unread', async (req, res) => {
   const user = getUsername(req);
   const id = req.params.id;
 
@@ -432,7 +432,7 @@ router.patch('/mail/:id/unread', authenticateToken, async (req, res) => {
 });
 
 // toggle star on email
-router.patch('/mail/:id/star', authenticateToken, async (req, res) => {
+router.patch('/mail/:id/star', async (req, res) => {
   const user = getUsername(req);
   const id = req.params.id;
   const { isStarred } = req.body;
@@ -471,7 +471,7 @@ router.patch('/mail/:id/star', authenticateToken, async (req, res) => {
 });
 
 // Move single email to folder (INBOX, SPAM, TRASH, ARCHIVE)
-router.post('/mail/:id/move', authenticateToken, async (req, res) => {
+router.post('/mail/:id/move', async (req, res) => {
   const user = getUsername(req);
   const id = req.params.id;
   const { to } = req.body;
@@ -511,7 +511,7 @@ router.post('/mail/:id/move', authenticateToken, async (req, res) => {
 });
 
 // Delete single email (soft delete -> move to TRASH)
-router.delete('/mail/:id', authenticateToken, async (req, res) => {
+router.delete('/mail/:id', async (req, res) => {
   const user = getUsername(req);
   const id = req.params.id;
 
@@ -545,7 +545,7 @@ router.delete('/mail/:id', authenticateToken, async (req, res) => {
 });
 
 // Bulk actions endpoint
-router.post('/mail/bulk', authenticateToken, async (req, res) => {
+router.post('/mail/bulk', async (req, res) => {
   const user = getUsername(req);
   const { ids, action, to } = req.body;
 
@@ -604,7 +604,7 @@ router.post('/mail/bulk', authenticateToken, async (req, res) => {
 });
 
 // Permanent delete endpoint (use with caution)
-router.delete('/mail/:id/permanent', authenticateToken, async (req, res) => {
+router.delete('/mail/:id/permanent', async (req, res) => {
   const user = getUsername(req);
   const id = req.params.id;
 

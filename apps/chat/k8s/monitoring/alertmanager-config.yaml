@@ -1,11 +1,11 @@
-# AlertManager Configuration for Whooper
-# Routes alerts to email via webhook to Whooper backend
+# AlertManager Configuration for Darevel Chat
+# Routes alerts to email via webhook to Darevel Chat backend
 
 apiVersion: v1
 kind: Secret
 metadata:
-  name: alertmanager-whooper
-  namespace: whooper
+  name: alertmanager-darevel-chat
+  namespace: darevel-chat
 type: Opaque
 stringData:
   alertmanager.yaml: |
@@ -27,27 +27,27 @@ stringData:
         # Critical alerts - send immediately
         - match:
             severity: critical
-          receiver: 'whooper-email-critical'
+          receiver: 'darevel-chat-email-critical'
           group_wait: 10s
           repeat_interval: 1h
 
         # Warning alerts - batch and send
         - match:
             severity: warning
-          receiver: 'whooper-email-warning'
+          receiver: 'darevel-chat-email-warning'
           group_wait: 1m
           repeat_interval: 4h
 
         # Pod-specific alerts
         - match:
             type: pod_failure
-          receiver: 'whooper-email-pod-alerts'
+          receiver: 'darevel-chat-email-pod-alerts'
           group_wait: 30s
           repeat_interval: 2h
 
         - match:
             type: pod_crash_loop
-          receiver: 'whooper-email-pod-alerts'
+          receiver: 'darevel-chat-email-pod-alerts'
           group_wait: 1m
           repeat_interval: 3h
 
@@ -57,27 +57,27 @@ stringData:
       - name: 'default'
 
       # Critical alerts - send to Whooper backend webhook
-      - name: 'whooper-email-critical'
+      - name: 'darevel-chat-email-critical'
         webhook_configs:
-          - url: 'http://whooper-backend.whooper.svc.cluster.local:5001/api/alerts/webhook'
+          - url: 'http://darevel-chat-backend.darevel-chat.svc.cluster.local:5001/api/alerts/webhook'
             send_resolved: true
             http_config:
               follow_redirects: true
             max_alerts: 10
 
       # Warning alerts - send to Whooper backend webhook
-      - name: 'whooper-email-warning'
+      - name: 'darevel-chat-email-warning'
         webhook_configs:
-          - url: 'http://whooper-backend.whooper.svc.cluster.local:5001/api/alerts/webhook'
+          - url: 'http://darevel-chat-backend.darevel-chat.svc.cluster.local:5001/api/alerts/webhook'
             send_resolved: true
             http_config:
               follow_redirects: true
             max_alerts: 10
 
       # Pod alerts - send to Whooper backend webhook
-      - name: 'whooper-email-pod-alerts'
+      - name: 'darevel-chat-email-pod-alerts'
         webhook_configs:
-          - url: 'http://whooper-backend.whooper.svc.cluster.local:5001/api/alerts/webhook'
+          - url: 'http://darevel-chat-backend.darevel-chat.svc.cluster.local:5001/api/alerts/webhook'
             send_resolved: true
             http_config:
               follow_redirects: true
@@ -105,14 +105,14 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: alertmanager-templates
-  namespace: whooper
+  namespace: darevel-chat
 data:
-  whooper.tmpl: |
-    {{ define "whooper.title" }}
+  darevel-chat.tmpl: |
+    {{ define "darevel-chat.title" }}
     [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .GroupLabels.alertname }}
     {{ end }}
 
-    {{ define "whooper.text" }}
+    {{ define "darevel-chat.text" }}
     {{ range .Alerts }}
     Alert: {{ .Labels.alertname }}
     Severity: {{ .Labels.severity }}

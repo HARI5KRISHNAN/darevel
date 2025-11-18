@@ -2,9 +2,7 @@
 
 import { ArrowRight, Zap, TrendingUp, Camera, Sparkles, Palette, Printer, Building2 } from "lucide-react"
 import { motion } from "framer-motion"
-import { useState, useEffect } from "react"
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
 
 const SolutionsDropdown = ({ isOpen }: { isOpen: boolean }) => {
   const solutions = [
@@ -92,15 +90,6 @@ const SolutionsDropdown = ({ isOpen }: { isOpen: boolean }) => {
 
 export default function Home() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
-  const { data: session, status } = useSession()
-  const router = useRouter()
-
-  // Redirect authenticated users to dashboard
-  useEffect(() => {
-    if (status === "authenticated") {
-      router.push("/dashboard")
-    }
-  }, [status, router])
 
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">

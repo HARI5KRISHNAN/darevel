@@ -3,10 +3,11 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    global: 'globalThis',
+  },
   server: {
-    host: "chat.darevel.local",
+    host: "localhost",
     port: 3003,
-    https: false,
-    allowedHosts: ["chat.darevel.local"],
   }
 });

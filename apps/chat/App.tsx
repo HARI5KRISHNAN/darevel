@@ -1,20 +1,20 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { View, User, Project, Pod } from './types';
+import React, { useState, useEffect } from 'react';
+import { View, User, Project } from './types';
 import NavigationSidebar from './components/NavigationSidebar';
 import RightSidebar from './components/RightSidebar';
 import SettingsView from './components/SettingsView';
 import PodStatusView from './components/PodStatusView';
 import KanbanBoard from './components/KanbanBoard';
-import MessagesView, { dummyConversations } from './components/MessagesView';
+import MessagesView from './components/MessagesView';
 import PermissionsPage from './pages/PermissionsPage';
 import StatusBar from './components/StatusBar';
 import ProjectDetailView from './components/ProjectDetailView';
 import { initialProjects, availableUsers } from './data/mock';
-import VideoCallView from './components/VideoCallView';
 import NewProjectModal from './components/NewProjectModal';
 import { useRealTimeK8s } from './hooks/useRealTimeK8s';
 import IncidentDashboard from './components/IncidentDashboard';
+import AuthPage from './components/AuthPage';
 
 type Theme = 'light' | 'dark';
 
@@ -32,13 +32,7 @@ const App: React.FC = () => {
     } catch (e) {
         console.error("Failed to parse user from localStorage", e);
     }
-    return {
-      id: 1,
-      name: 'Esther Howard',
-      email: 'esther@example.com',
-      avatar: 'https://i.pravatar.cc/80?u=esther',
-      level: 'Elementary',
-    };
+    return null; // No default user - require login
   });
 
   const [activeView, setActiveView] = useState<View>('home');
@@ -49,10 +43,7 @@ const App: React.FC = () => {
     (localStorage.getItem('theme') as Theme) || 'dark'
   );
   const [userSearchQuery, setUserSearchQuery] = useState('');
-  const [isCallActive, setIsCallActive] = useState(false);
-  const [activeCallContact, setActiveCallContact] = useState<{ name: string; avatar: string; } | null>(null);
-  const [activeCallType, setActiveCallType] = useState<'audio' | 'video' | null>(null);
-  
+
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   
@@ -102,23 +93,6 @@ const App: React.FC = () => {
     setSelectedProjectId(null);
   };
 
-  const handleStartCall = (channelId: string, type: 'audio' | 'video') => {
-    const contact = dummyConversations.find(c => c.id === channelId);
-    if (contact) {
-        setActiveCallContact({ name: contact.name, avatar: contact.avatar });
-        setActiveCallType(type);
-        setIsCallActive(true);
-    } else {
-        alert('Contact not found for call.');
-    }
-  };
-
-  const handleEndCall = () => {
-    setIsCallActive(false);
-    setActiveCallContact(null);
-    setActiveCallType(null);
-  };
-
   const handleOpenCreateProject = () => {
     setProjectToEdit(null);
     setIsProjectModalOpen(true);
@@ -159,6 +133,20 @@ const App: React.FC = () => {
     setActiveView('status');
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('whooper_user');
+    setUser(null);
+  };
+
+  const handleLogin = (loggedInUser: User) => {
+    setUser(loggedInUser);
+  };
+
+  // Show auth page if no user is logged in
+  if (!user) {
+    return <AuthPage onLogin={handleLogin} />;
+  }
+
   const renderView = () => {
     if (activeView === 'home' && selectedProjectId) {
         const selectedProject = projects.find(p => p.id === selectedProjectId);
@@ -175,7 +163,6 @@ const App: React.FC = () => {
           <MessagesView
             user={user}
             searchQuery={userSearchQuery}
-            onStartCall={handleStartCall}
           />
         );
       case 'permission':
@@ -193,9 +180,9 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full bg-background-main font-sans text-sm overflow-hidden">
-      <NavigationSidebar 
+      <NavigationSidebar
         user={user}
-        activeView={activeView} 
+        activeView={activeView}
         onNavigate={(view) => {
             setSelectedProjectId(null); // Deselect project when navigating away
             setActiveView(view);
@@ -206,6 +193,7 @@ const App: React.FC = () => {
         onToggleTheme={handleToggleTheme}
         userSearchQuery={userSearchQuery}
         onUserSearchChange={handleUserSearchChange}
+        onLogout={handleLogout}
       />
       <div className="flex-1 flex flex-col min-w-0">
         <main className="flex-1 flex min-w-0 overflow-y-auto no-scrollbar">
@@ -214,13 +202,6 @@ const App: React.FC = () => {
         <StatusBar pods={pods} onOpenPodStatusView={handleOpenPodStatusView} />
       </div>
       <RightSidebar />
-      {isCallActive && activeCallContact && activeCallType && (
-        <VideoCallView 
-          onEndCall={handleEndCall}
-          contact={activeCallContact}
-          callType={activeCallType}
-        />
-      )}
       {isProjectModalOpen && (
         <NewProjectModal
             onClose={() => { setIsProjectModalOpen(false); setProjectToEdit(null); }}

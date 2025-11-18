@@ -1,42 +1,28 @@
-# Multi-stage build for TypeScript backend
-
-# Stage 1: Build
-FROM node:18-alpine AS builder
+FROM maven:3.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy entire project (parent pom + chat backend)
+COPY pom.xml .
+COPY apps/chat/backend/pom.xml ./apps/chat/backend/pom.xml
+COPY apps/chat/backend/src ./apps/chat/backend/src
 
-# Install all dependencies (including devDependencies for build)
-RUN npm ci
+# Build the chat backend using the parent POM structure
+RUN mvn -f apps/chat/backend/pom.xml clean package -DskipTests
 
-# Copy source code
-COPY . .
-
-# Build TypeScript to JavaScript
-RUN npm run build
-
-# Stage 2: Production
-FROM node:18-alpine
+# Runtime stage
+FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Install curl for healthcheck
+RUN apk add --no-cache curl
 
-# Install only production dependencies
-RUN npm ci --only=production
+# Copy the JAR from build stage
+COPY --from=build /app/apps/chat/backend/target/darevel-chat-backend-1.0.0.jar app.jar
 
-# Copy compiled JavaScript from builder
-COPY --from=builder /app/dist ./dist
+# Expose port
+EXPOSE 8081
 
-# Expose backend port
-EXPOSE 5001
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5001/api/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); })"
-
-# Start the server
-CMD ["node", "dist/server.js"]
+# Run the application
+ENTRYPOINT ["java", "-jar", "app.jar"]

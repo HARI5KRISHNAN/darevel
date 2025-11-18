@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database - Single instance with multiple databases
+  postgres:
+    image: postgres:15-alpine
+    container_name: darevel-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - darevel-network
+
+  # Keycloak - OpenID Connect SSO for all apps
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0.1
+    container_name: darevel-keycloak
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: "jdbc:postgresql://postgres:5432/keycloak"
+      KC_DB_USERNAME: ${POSTGRES_USER:-postgres}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-localhost:8080}
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY: "edge"
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    ports:
+      - "${KEYCLOAK_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command:
+      - start-dev
+    networks:
+      - darevel-network
+
+networks:
+  darevel-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

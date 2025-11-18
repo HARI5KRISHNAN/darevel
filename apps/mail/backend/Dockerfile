@@ -1,21 +1,28 @@
-FROM node:20-alpine
-
-# Install netcat for healthchecks and wait-for scripts
-RUN apk add --no-cache netcat-openbsd
+FROM maven:3.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
-# Copy package files and install dependencies
-COPY package*.json ./
-RUN npm install --omit=dev --no-audit
+# Copy entire project (parent pom + mail backend)
+COPY pom.xml .
+COPY apps/mail/backend/pom.xml ./apps/mail/backend/pom.xml
+COPY apps/mail/backend/src ./apps/mail/backend/src
 
-# Copy application code
-COPY . .
+# Build the mail backend using the parent POM structure
+RUN mvn -f apps/mail/backend/pom.xml clean package -DskipTests
 
-# Make entrypoint executable
-RUN chmod +x docker-entrypoint.sh
+# Runtime stage
+FROM eclipse-temurin:17-jre-alpine
 
-EXPOSE 8081 2525
+WORKDIR /app
 
-# Use entrypoint script that runs migrations automatically
-ENTRYPOINT ["/bin/sh", "/app/docker-entrypoint.sh"]
+# Install curl for healthcheck
+RUN apk add --no-cache curl
+
+# Copy the JAR from build stage
+COPY --from=build /app/apps/mail/backend/target/darevel-mail-backend-1.0.0.jar app.jar
+
+# Expose port
+EXPOSE 8083
+
+# Run the application
+ENTRYPOINT ["java", "-jar", "app.jar"]

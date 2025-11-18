@@ -17,33 +17,16 @@ const PodAlertsPanel: React.FC = () => {
 
   useEffect(() => {
     fetchAlerts();
-
-    // Listen for real-time alerts via Socket.IO
-    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-    const socket = new WebSocket(`ws://${BACKEND_URL.replace('http://', '')}`);
-
-    socket.addEventListener('message', (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'pod_alert') {
-          setAlerts(prev => [data.alert, ...prev]);
-        }
-      } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
-      }
-    });
-
-    return () => {
-      socket.close();
-    };
+    // Socket.IO connection is handled by useRealTimeK8s hook
+    // Remove duplicate WebSocket connection
   }, []);
 
   const fetchAlerts = async () => {
     try {
-      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-      const response = await fetch(`${BACKEND_URL}/api/alerts`);
-      const data = await response.json();
-      setAlerts(data.alerts || []);
+      // TODO: Alerts API not yet implemented in Java backend
+      // For now, use mock data or disable alerts
+      console.warn('Alerts API not available in Java backend yet');
+      setAlerts([]);
     } catch (error) {
       console.error('Failed to fetch alerts:', error);
     } finally {
@@ -53,18 +36,13 @@ const PodAlertsPanel: React.FC = () => {
 
   const acknowledgeAlert = async (alertId: string) => {
     try {
-      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-      const response = await fetch(`${BACKEND_URL}/api/alerts/${alertId}/acknowledge`, {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        setAlerts(prev =>
-          prev.map(alert =>
-            alert.id === alertId ? { ...alert, acknowledged: true } : alert
-          )
-        );
-      }
+      // TODO: Alerts API not yet implemented in Java backend
+      console.warn('Acknowledge alert not available in Java backend yet');
+      setAlerts(prev =>
+        prev.map(alert =>
+          alert.id === alertId ? { ...alert, acknowledged: true } : alert
+        )
+      );
     } catch (error) {
       console.error('Failed to acknowledge alert:', error);
     }

@@ -25,6 +25,7 @@ export interface Message {
   sender?: User; // For multi-user chat
   timestamp?: string;
   type?: 'text' | 'summary';
+  channelId?: string; // The channel this message belongs to
   file?: {
     url: string;
     name: string;
@@ -65,6 +66,10 @@ export interface DirectMessage {
   timestamp: string;
   online?: boolean;
   unreadCount?: number;
+  isPinned?: boolean;
+  isMuted?: boolean;
+  isGroup?: boolean;
+  members?: User[];
 }
 
 export interface DirectConversation extends DirectMessage {

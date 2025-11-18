@@ -53,7 +53,8 @@ const ConversationView: React.FC<ConversationViewProps> = ({ conversation, onSen
     useEffect(() => {
         onMarkAsRead();
         setSelectedMessageIds([]); // Clear selection when conversation changes
-    }, [conversation.id, onMarkAsRead]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [conversation.id]);
 
     useEffect(() => {
         // Clear selection if new messages arrive
@@ -139,20 +140,26 @@ const ConversationView: React.FC<ConversationViewProps> = ({ conversation, onSen
             <div className="flex-1 overflow-y-auto p-6 no-scrollbar">
                 <div className="space-y-1">
                     {conversation.messages.map((msg, index) => {
+                        // Don't augment messages - backend provides complete sender info
                         const augmentedMessage: Message = { ...msg };
-                        if (msg.role === Role.USER && user) {
-                            augmentedMessage.sender = user;
-                        } else if (msg.role === Role.MODEL) {
-                            augmentedMessage.sender = {
-                                id: -parseInt(conversation.id.replace(/\D/g, '') || '0'),
-                                name: conversation.name,
-                                avatar: conversation.avatar,
-                            };
+
+                        // Only add sender for legacy messages without sender info
+                        if (!msg.sender) {
+                            if (msg.role === Role.USER && user) {
+                                augmentedMessage.sender = user;
+                            } else if (msg.role === Role.MODEL) {
+                                augmentedMessage.sender = {
+                                    id: -parseInt(conversation.id.replace(/\D/g, '') || '0'),
+                                    name: conversation.name,
+                                    avatar: conversation.avatar,
+                                };
+                            }
                         }
+
                         return (
-                            <ChatMessage 
-                                key={msg.id || index} 
-                                message={augmentedMessage} 
+                            <ChatMessage
+                                key={msg.id || index}
+                                message={augmentedMessage}
                                 currentUserId={user?.id || null}
                                 onReact={onReact}
                                 isSelected={msg.id ? selectedMessageIds.includes(msg.id) : false}

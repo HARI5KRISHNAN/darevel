@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
-import { SessionProvider } from './providers'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -34,9 +33,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans antialiased`}>
-        <SessionProvider>
-          {children}
-          <Analytics />
+        {children}
+        <Analytics />
 
 
 {/* Auto-added Darevel footer */}
@@ -44,7 +42,6 @@ export default function RootLayout({
   <p>© 2025 <span style={{background: 'linear-gradient(90deg,#a855f7,#06b6d4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', fontWeight:700}}>Darevel</span>. Unified Workspace for the Future.</p>
 </footer>
 
-        </SessionProvider>
 </body>
     </html>
   )

@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: darevel-dashboard
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/darevel_dashboard
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: ${KEYCLOAK_CLIENT_ID:darevel-dashboard}
+            client-secret: ${KEYCLOAK_CLIENT_SECRET:secret}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/keycloak"
+        provider:
+          keycloak:
+            issuer-uri: ${KEYCLOAK_ISSUER:http://localhost:8080/realms/darevel}
+
+server:
+  port: ${SERVER_PORT:8085}
+  servlet:
+    context-path: /api
+
+logging:
+  level:
+    root: INFO
+    com.darevel: DEBUG
