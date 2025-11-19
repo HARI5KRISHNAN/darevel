@@ -35,6 +35,16 @@ public class Message {
     @Column(name = "is_read")
     private Boolean isRead = false;
 
+    // Encryption fields (optional - for server-side encryption)
+    @Column(name = "encryption_iv")
+    private String encryptionIv;
+
+    @Column(name = "wrapped_message_key")
+    private String wrappedMessageKey;
+
+    @Column(name = "is_encrypted")
+    private Boolean isEncrypted = false;
+
     // Transient fields for user information (fetched from auth service)
     @Transient
     private String userName;

@@ -1,4 +1,4 @@
-package com.darevel.chat.config;
+package com.darevel.kubernetes.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -12,28 +12,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        // Expose topics and queues used by the application
-        config.enableSimpleBroker(
-            "/topic",
-            "/queue",
-            "/topic/messages",
-            "/topic/call-signal"
-        );
-
-        // Prefix for messages destined to @MessageMapping handlers
+        config.enableSimpleBroker("/topic");
         config.setApplicationDestinationPrefixes("/app");
-
-        // If you use SimpUserDestinationResolver for user destinations:
-        config.setUserDestinationPrefix("/user");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // Raw WebSocket endpoint (use reverse proxy for TLS termination in prod)
-        registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*");
-
-        // SockJS fallback for older clients:
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();

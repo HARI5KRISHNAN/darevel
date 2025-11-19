@@ -1,0 +1,38 @@
+server:
+  port: 8087
+
+spring:
+  application:
+    name: ai-service
+
+# Ollama Configuration
+ollama:
+  base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+  default-model: ${OLLAMA_MODEL:llama2}
+  default-temperature: 0.7
+  default-max-tokens: 2000
+  timeout-seconds: 60
+
+# Actuator Configuration for Prometheus
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,metrics,info
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+
+# Logging
+logging:
+  level:
+    com.darevel: DEBUG
+    org.springframework: INFO

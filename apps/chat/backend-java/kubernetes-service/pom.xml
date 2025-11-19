@@ -11,9 +11,9 @@
         <version>1.0.0</version>
     </parent>
 
-    <artifactId>ai-service</artifactId>
-    <name>Darevel Chat - AI Service</name>
-    <description>AI and Ollama Integration Service</description>
+    <artifactId>kubernetes-service</artifactId>
+    <name>Darevel Chat - Kubernetes Service</name>
+    <description>Kubernetes Pod Monitoring and Management Service</description>
 
     <dependencies>
         <!-- Common Module -->
@@ -29,15 +29,18 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+
+        <!-- Kubernetes Java Client -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
+            <groupId>io.kubernetes</groupId>
+            <artifactId>client-java</artifactId>
+            <version>19.0.0</version>
         </dependency>
 
         <!-- Lombok -->

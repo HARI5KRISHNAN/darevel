@@ -1,10 +1,11 @@
 package com.darevel.chat.service;
 
-import com.darevel.common.dto.UserDto;
 import com.darevel.chat.dto.MessageDto;
 import com.darevel.chat.dto.SendMessageRequest;
 import com.darevel.chat.model.Message;
 import com.darevel.chat.repository.MessageRepository;
+import com.darevel.chat.security.AttachmentEncryptionService;
+import com.darevel.chat.security.CryptoUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,10 +14,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * ChatService: persists messages, handles optional server-side encryption,
+ * enriches messages with user info and broadcasts saved messages to subscribers.
+ *
+ * Note: WebSocketController should NOT also broadcast the same message after calling this method,
+ * to avoid duplicate pushes. Either side may broadcast, but only once.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -24,10 +35,14 @@ public class ChatService {
 
     private final MessageRepository messageRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final AttachmentEncryptionService attachmentEncryptionService;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${auth.service.url:http://localhost:8081}")
     private String authServiceUrl;
+
+    @Value("${chat.encryption.enabled:false}")
+    private boolean encryptionEnabled;
 
     public List<MessageDto> getMessages(String channelId) {
         List<Message> messages = messageRepository.findByChannelIdOrderByTimestampAsc(channelId);
@@ -41,36 +56,62 @@ public class ChatService {
         return messageRepository.findDistinctChannelIdsByUserId(userId);
     }
 
+    /**
+     * Persist message, optionally encrypt, then broadcast to subscribers.
+     * Returns the DTO (plaintext if server-side decryption is configured).
+     */
     @Transactional
     public MessageDto sendMessage(String channelId, SendMessageRequest request) {
         Message message = new Message();
         message.setChannelId(channelId);
         message.setUserId(request.getUserId());
-        message.setContent(request.getContent());
         message.setIsRead(false);
+
+        // Optional server-side encryption (disabled by default, prefer E2EE)
+        if (encryptionEnabled) {
+            try {
+                log.debug("Server-side encryption enabled, encrypting message content");
+                String plaintext = request.getContent();
+
+                // Generate AES key for this message
+                SecretKey msgKey = CryptoUtil.generateAesKey();
+                CryptoUtil.EncryptedResult enc = CryptoUtil.encryptAesGcm(
+                    plaintext.getBytes(StandardCharsets.UTF_8), msgKey);
+
+                // Wrap msgKey with KMS (uses AttachmentEncryptionService's KMS client)
+                // IMPORTANT: currently a placeholder. Replace with real KMS wrap in production.
+                byte[] wrappedKey = msgKey.getEncoded(); // Placeholder - use KMS in production
+
+                // Store ciphertext and encryption metadata
+                message.setContent(CryptoUtil.base64(enc.getCipherText()));
+                message.setEncryptionIv(CryptoUtil.base64(enc.getIv()));
+                message.setWrappedMessageKey(Base64.getEncoder().encodeToString(wrappedKey));
+                message.setIsEncrypted(true);
+
+                log.debug("Message encrypted successfully for channel: {}", channelId);
+            } catch (Exception e) {
+                log.error("Failed to encrypt message, storing plaintext", e);
+                message.setContent(request.getContent());
+                message.setIsEncrypted(false);
+            }
+        } else {
+            // Store plaintext (default behavior, or client sends E2EE ciphertext)
+            message.setContent(request.getContent());
+            message.setIsEncrypted(false);
+        }
 
         message = messageRepository.save(message);
 
+        // Build DTO to broadcast
         MessageDto messageDto = enrichMessageWithUserInfo(message);
 
-        // Broadcast to channel topic
-        messagingTemplate.convertAndSend("/topic/messages/" + channelId, messageDto);
-        log.info("Broadcasted message to /topic/messages/{}", channelId);
-
-        // If DM, also broadcast to per-user topics for both participants
-        if (channelId.startsWith("dm-")) {
-            String[] parts = channelId.split("-");
-            if (parts.length == 3) {
-                try {
-                    Long userId1 = Long.parseLong(parts[1]);
-                    Long userId2 = Long.parseLong(parts[2]);
-                    messagingTemplate.convertAndSend("/topic/messages/user-" + userId1, messageDto);
-                    messagingTemplate.convertAndSend("/topic/messages/user-" + userId2, messageDto);
-                    log.info("Broadcasted DM to /topic/messages/user-{} and /topic/messages/user-{}", userId1, userId2);
-                } catch (Exception e) {
-                    log.warn("Failed to parse DM channelId {} for per-user broadcast", channelId, e);
-                }
-            }
+        // Broadcast to subscribers of the channel so both REST and non-WS senders push messages
+        try {
+            String destination = "/topic/messages/" + channelId;
+            messagingTemplate.convertAndSend(destination, messageDto);
+            log.info("💬 Broadcasted (from ChatService) message {} to {}", message.getId(), destination);
+        } catch (Exception e) {
+            log.error("Failed to broadcast message {} to topic {}: {}", message.getId(), channelId, e.getMessage());
         }
 
         return messageDto;
@@ -91,9 +132,32 @@ public class ChatService {
         dto.setId(message.getId());
         dto.setChannelId(message.getChannelId());
         dto.setUserId(message.getUserId());
-        dto.setContent(message.getContent());
         dto.setTimestamp(message.getTimestamp());
         dto.setIsRead(message.getIsRead());
+
+        // Decrypt content if server-side encrypted
+        if (message.getIsEncrypted() != null && message.getIsEncrypted()) {
+            try {
+                log.debug("Decrypting message {} for delivery", message.getId());
+                // In production, unwrap key from KMS first
+                byte[] wrappedKey = Base64.getDecoder().decode(message.getWrappedMessageKey());
+                SecretKey msgKey = CryptoUtil.secretKeyFromBytes(wrappedKey); // Use KMS unwrap in prod
+
+                CryptoUtil.EncryptedResult encrypted = new CryptoUtil.EncryptedResult(
+                    CryptoUtil.fromBase64(message.getEncryptionIv()),
+                    CryptoUtil.fromBase64(message.getContent())
+                );
+
+                byte[] plaintext = CryptoUtil.decryptAesGcm(encrypted, msgKey);
+                dto.setContent(new String(plaintext, StandardCharsets.UTF_8));
+            } catch (Exception e) {
+                log.error("Failed to decrypt message {}", message.getId(), e);
+                dto.setContent("[Encrypted - Decryption Failed]");
+            }
+        } else {
+            // Plaintext or E2EE ciphertext (passed through as-is)
+            dto.setContent(message.getContent());
+        }
 
         // Fetch user details from Auth Service
         try {
