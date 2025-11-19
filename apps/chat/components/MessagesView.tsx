@@ -44,6 +44,8 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery }) => {
     const [incomingCall, setIncomingCall] = useState<{ type: 'audio' | 'video'; caller: User; receiver: User; channelId: string; offer?: RTCSessionDescriptionInit } | null>(null);
     const localVideoRef = useRef<HTMLVideoElement>(null);
     const remoteVideoRef = useRef<HTMLVideoElement>(null);
+    // Debug toasts for incoming WebSocket messages
+    const [debugToasts, setDebugToasts] = useState<Array<{ id: number; text: string }>>([]);
 
     // Helper function to create consistent channel ID for direct messages
     const createDirectMessageChannelId = (userId1: number, userId2: number): string => {
@@ -110,26 +112,46 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery }) => {
     const handleWebSocketMessage = useCallback((message: Message) => {
         console.log('📩 Received message via WebSocket:', message);
 
+        // Add a small debug toast so incoming messages are visible on-screen
+        try {
+            const toastId = Date.now() + Math.floor(Math.random() * 1000);
+            const toastText = `${message.channelId}: ${message.content?.slice(0, 120)}`;
+            setDebugToasts(prev => [{ id: toastId, text: toastText }, ...prev].slice(0, 5));
+            // auto-remove after 8 seconds
+            setTimeout(() => {
+                setDebugToasts(prev => prev.filter(t => t.id !== toastId));
+            }, 8000);
+        } catch (e) {
+            // ignore
+        }
+
         setConversations(prev => {
             const existingConvo = prev.find(c => c.id === message.channelId);
 
             if (existingConvo) {
-                // Update existing conversation
-                return prev.map(convo => {
+                // Update existing conversation and increment unread if not active
+                const updated = prev.map(convo => {
                     if (convo.id === message.channelId) {
                         // Check if message already exists
                         const exists = convo.messages.some(m => m.id === message.id);
                         if (exists) return convo;
 
+                        const isActive = selectedConversationId === message.channelId;
+                        const newUnread = isActive ? (convo.unreadCount || 0) : ((convo.unreadCount || 0) + 1);
+
                         return {
                             ...convo,
                             messages: [...convo.messages, message],
                             lastMessage: message.content || 'New message',
-                            timestamp: 'just now'
+                            timestamp: 'just now',
+                            unreadCount: newUnread,
                         };
                     }
                     return convo;
                 });
+
+                console.log('🧾 Conversations updated (existing):', updated.map(c => ({ id: c.id, unreadCount: c.unreadCount, lastMessage: c.lastMessage })));
+                return updated;
             } else {
                 // Auto-create conversation if message arrives for non-existent channel
                 if (message.sender && message.channelId) {
@@ -142,9 +164,13 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery }) => {
                             lastMessage: message.content || 'New message',
                             timestamp: 'just now',
                             online: false,
-                            messages: [message]
+                            messages: [message],
+                            // mark unread if it's not the currently selected conversation
+                            unreadCount: selectedConversationId === message.channelId ? 0 : 1,
                         };
-                        return [newConvo, ...prev];
+                        const updated = [newConvo, ...prev];
+                        console.log('🧾 Conversations updated (created):', updated.map(c => ({ id: c.id, unreadCount: c.unreadCount, lastMessage: c.lastMessage })));
+                        return updated;
                     }
                     // Handle group messages
                     else if (message.channelId.startsWith('group-')) {
@@ -219,12 +245,15 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery }) => {
         onMessageReceived: handleWebSocketMessage,
         user: user,
         onCallSignal: handleCallSignal,
+        subscribeChannelIds: conversations.map(c => c.id),
     });
 
     // Update sendSignalRef when sendSignalMessage is available
     useEffect(() => {
         sendSignalRef.current = sendSignalMessage;
     }, [sendSignalMessage]);
+
+    // (subscriptions are now provided to useWebSocket via `subscribeChannelIds` prop)
 
     // Fetch all registered users on mount
     useEffect(() => {
@@ -719,6 +748,15 @@ const MessagesView: React.FC<MessagesViewProps> = ({ user, searchQuery }) => {
 
     return (
         <div className="flex-1 flex min-w-0 h-full">
+            {/* Debug toasts for incoming messages (temporary) */}
+            <div className="fixed top-4 right-4 z-50 space-y-2">
+                {debugToasts.map(t => (
+                    <div key={t.id} className="max-w-xs bg-white border border-border-color shadow-lg rounded-md p-2 text-sm text-text-primary">
+                        <div className="font-medium truncate">Incoming message</div>
+                        <div className="text-xs text-text-secondary truncate">{t.text}</div>
+                    </div>
+                ))}
+            </div>
             <aside className={`bg-background-panel flex flex-col border-r border-border-color transition-all duration-300 ease-in-out ${isCollapsed ? 'w-20' : 'w-96'}`}>
                 <header className="p-4 border-b border-border-color shadow-sm h-[61px] flex items-center justify-between shrink-0">
                     {!isCollapsed && (

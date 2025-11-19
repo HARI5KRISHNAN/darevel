@@ -12,4 +12,5 @@ com\darevel\chat\config\SecurityConfig.class
 com\darevel\chat\dto\AuthResponse.class
 com\darevel\chat\model\User$UserBuilder.class
 com\darevel\chat\dto\AuthResponse$UserDTO.class
+com\darevel\chat\config\WebSocketConfig.class
 com\darevel\chat\ChatServiceApplication.class

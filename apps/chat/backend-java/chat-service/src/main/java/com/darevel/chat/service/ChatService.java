@@ -53,9 +53,25 @@ public class ChatService {
 
         MessageDto messageDto = enrichMessageWithUserInfo(message);
 
-        // Broadcast message to WebSocket subscribers
+        // Broadcast to channel topic
         messagingTemplate.convertAndSend("/topic/messages/" + channelId, messageDto);
         log.info("Broadcasted message to /topic/messages/{}", channelId);
+
+        // If DM, also broadcast to per-user topics for both participants
+        if (channelId.startsWith("dm-")) {
+            String[] parts = channelId.split("-");
+            if (parts.length == 3) {
+                try {
+                    Long userId1 = Long.parseLong(parts[1]);
+                    Long userId2 = Long.parseLong(parts[2]);
+                    messagingTemplate.convertAndSend("/topic/messages/user-" + userId1, messageDto);
+                    messagingTemplate.convertAndSend("/topic/messages/user-" + userId2, messageDto);
+                    log.info("Broadcasted DM to /topic/messages/user-{} and /topic/messages/user-{}", userId1, userId2);
+                } catch (Exception e) {
+                    log.warn("Failed to parse DM channelId {} for per-user broadcast", channelId, e);
+                }
+            }
+        }
 
         return messageDto;
     }
