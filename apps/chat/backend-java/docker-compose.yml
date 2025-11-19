@@ -91,6 +91,92 @@ services:
       # Mount Ansible playbooks if needed
       - ./ansible:/app/src/ansible:ro
 
+  # Kubernetes Service
+  kubernetes-service:
+    build:
+      context: .
+      dockerfile: kubernetes-service/Dockerfile
+    container_name: darevel-kubernetes-service
+    ports:
+      - "8084:8084"
+    networks:
+      - darevel-network
+    restart: unless-stopped
+    volumes:
+      # Mount kubeconfig if running outside cluster
+      - ~/.kube/config:/root/.kube/config:ro
+
+  # Alerts Service
+  alerts-service:
+    build:
+      context: .
+      dockerfile: alerts-service/Dockerfile
+    container_name: darevel-alerts-service
+    ports:
+      - "8085:8085"
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  # Incidents Service
+  incidents-service:
+    build:
+      context: .
+      dockerfile: incidents-service/Dockerfile
+    container_name: darevel-incidents-service
+    ports:
+      - "8086:8086"
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  # AI Service (with Ollama)
+  ai-service:
+    build:
+      context: .
+      dockerfile: ai-service/Dockerfile
+    container_name: darevel-ai-service
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama2
+    ports:
+      - "8087:8087"
+    depends_on:
+      - ollama
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  # Email Service
+  email-service:
+    build:
+      context: .
+      dockerfile: email-service/Dockerfile
+    container_name: darevel-email-service
+    environment:
+      - MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME:-}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+      - MAIL_FROM=${MAIL_FROM:-noreply@darevel.com}
+    ports:
+      - "8088:8088"
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  # Ollama AI Service
+  ollama:
+    image: ollama/ollama:latest
+    container_name: darevel-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
   # Nginx API Gateway
   nginx:
     image: nginx:alpine
@@ -103,6 +189,11 @@ services:
       - auth-service
       - chat-service
       - permissions-service
+      - kubernetes-service
+      - alerts-service
+      - incidents-service
+      - ai-service
+      - email-service
     networks:
       - darevel-network
     restart: unless-stopped
@@ -144,6 +235,7 @@ volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
+  ollama_data:
 
 networks:
   darevel-network:
