@@ -12,15 +12,28 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        // Enable a simple memory-based message broker
-        config.enableSimpleBroker("/topic");
-        // Prefix for messages from clients
+        // Expose topics and queues used by the application
+        config.enableSimpleBroker(
+            "/topic",
+            "/queue",
+            "/topic/messages",
+            "/topic/call-signal"
+        );
+
+        // Prefix for messages destined to @MessageMapping handlers
         config.setApplicationDestinationPrefixes("/app");
+
+        // If you use SimpUserDestinationResolver for user destinations:
+        config.setUserDestinationPrefix("/user");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // WebSocket endpoint
+        // Raw WebSocket endpoint (use reverse proxy for TLS termination in prod)
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("*");
+
+        // SockJS fallback for older clients:
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();

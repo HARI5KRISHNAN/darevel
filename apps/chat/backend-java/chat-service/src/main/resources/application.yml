@@ -25,6 +25,13 @@ auth:
   service:
     url: ${AUTH_SERVICE_URL:http://localhost:8081}
 
+# Chat Encryption Configuration
+# Set to true to enable server-side encryption (not recommended for E2EE scenarios)
+# When false, messages are stored as-is (plaintext or client-encrypted E2EE ciphertext)
+chat:
+  encryption:
+    enabled: ${CHAT_ENCRYPTION_ENABLED:false}
+
 # Actuator Configuration for Prometheus
 management:
   endpoints:

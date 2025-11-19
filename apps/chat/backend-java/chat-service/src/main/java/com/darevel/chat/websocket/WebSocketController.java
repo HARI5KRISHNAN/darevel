@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
@@ -20,55 +19,45 @@ public class WebSocketController {
     private final ChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
 
+    /**
+     * Receive a chat message, persist it via ChatService, and broadcast to the channel topic.
+     */
     @MessageMapping("/chat/{channelId}/send")
-    @SendTo("/topic/messages/{channelId}")
-    public MessageDto sendMessage(
+    public void sendMessage(
             @DestinationVariable String channelId,
             SendMessageRequest request) {
+
         log.info("💬 Message received for channel: {}", channelId);
-        return chatService.sendMessage(channelId, request);
+
+        // Persist message (ChatService may handle encryption per your policy)
+        MessageDto saved = chatService.sendMessage(channelId, request);
+
+        // Broadcast to all subscribers of that channel
+        String destination = "/topic/messages/" + channelId;
+        messagingTemplate.convertAndSend(destination, saved);
+
+        log.info("💬 Broadcasted message {} to {}", saved.getId(), destination);
     }
 
     /**
-     * Handle WebRTC call signaling messages
-     * Receives from /app/call-signal/{toUserId}
-     * Sends to /topic/call-signal/{toUserId}
-     * 
-     * Messages flow:
-     * 1. Caller (Hari) sends: /app/call-signal/2 with payload containing signal
-     * 2. This method receives it, extracts toUserId from path (2)
-     * 3. Broadcasts to /topic/call-signal/2 for receiver (Ram) to listen
+     * Relay WebRTC call signaling messages.
+     * Clients send to /app/call-signal/{toUserId}
+     * Server relays to /topic/call-signal/{toUserId}
      */
     @MessageMapping("/call-signal/{toUserId}")
-    @SendTo("/topic/call-signal/{toUserId}")
-    public CallSignalDto handleCallSignal(
+    public void handleCallSignal(
             @DestinationVariable Long toUserId,
             CallSignalDto signalMessage) {
-        
-        log.info("========================================");
-        log.info("📞 CALL SIGNAL RECEIVED");
-        log.info("========================================");
-        log.info("📞 Receiver User ID (from path): {}", toUserId);
-        log.info("📞 Signal Type: {}", signalMessage.getType());
-        log.info("📞 From User: {}", signalMessage.getFrom());
-        log.info("📞 To User: {}", signalMessage.getTo());
-        log.info("📞 Channel: {}", signalMessage.getChannelId());
-        log.info("📞 Call Type: {}", signalMessage.getCallType());
-        log.info("📞 Has Offer: {}", signalMessage.getOffer() != null);
-        log.info("📞 Has Answer: {}", signalMessage.getAnswer() != null);
-        log.info("📞 Has ICE Candidate: {}", signalMessage.getCandidate() != null);
-        log.info("========================================");
-        log.info("📞 BROADCASTING to /topic/call-signal/{}", toUserId);
-        log.info("========================================");
-        
-        // Verify the toUserId matches the signal's 'to' field
+
+        log.info("📞 CALL SIGNAL RECEIVED for toUserId={}", toUserId);
+
         if (!toUserId.equals(signalMessage.getTo())) {
-            log.warn("⚠️  WARNING: Path toUserId {} doesn't match signal.to {}", 
-                    toUserId, signalMessage.getTo());
+            log.warn("⚠️  Path toUserId {} doesn't match signal.to {}", toUserId, signalMessage.getTo());
         }
-        
-        // Simply relay the message to the recipient
-        // Spring STOMP will automatically send this to /topic/call-signal/{toUserId}
-        return signalMessage;
+
+        String destination = "/topic/call-signal/" + toUserId;
+        messagingTemplate.convertAndSend(destination, signalMessage);
+
+        log.info("📞 Relayed call signal to {}", destination);
     }
 }
