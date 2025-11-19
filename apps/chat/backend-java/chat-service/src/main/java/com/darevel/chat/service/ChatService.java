@@ -21,6 +21,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * ChatService: persists messages, handles optional server-side encryption,
+ * enriches messages with user info and broadcasts saved messages to subscribers.
+ *
+ * Note: WebSocketController should NOT also broadcast the same message after calling this method,
+ * to avoid duplicate pushes. Either side may broadcast, but only once.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -49,6 +56,10 @@ public class ChatService {
         return messageRepository.findDistinctChannelIdsByUserId(userId);
     }
 
+    /**
+     * Persist message, optionally encrypt, then broadcast to subscribers.
+     * Returns the DTO (plaintext if server-side decryption is configured).
+     */
     @Transactional
     public MessageDto sendMessage(String channelId, SendMessageRequest request) {
         Message message = new Message();
@@ -68,7 +79,7 @@ public class ChatService {
                     plaintext.getBytes(StandardCharsets.UTF_8), msgKey);
 
                 // Wrap msgKey with KMS (uses AttachmentEncryptionService's KMS client)
-                // In production, replace with proper KMS integration
+                // IMPORTANT: currently a placeholder. Replace with real KMS wrap in production.
                 byte[] wrappedKey = msgKey.getEncoded(); // Placeholder - use KMS in production
 
                 // Store ciphertext and encryption metadata
@@ -91,9 +102,17 @@ public class ChatService {
 
         message = messageRepository.save(message);
 
-        // Note: Do not broadcast if using WebSocketController - it handles broadcasting
-        // This method is called from WebSocketController which does the broadcast
+        // Build DTO to broadcast
         MessageDto messageDto = enrichMessageWithUserInfo(message);
+
+        // Broadcast to subscribers of the channel so both REST and non-WS senders push messages
+        try {
+            String destination = "/topic/messages/" + channelId;
+            messagingTemplate.convertAndSend(destination, messageDto);
+            log.info("💬 Broadcasted (from ChatService) message {} to {}", message.getId(), destination);
+        } catch (Exception e) {
+            log.error("Failed to broadcast message {} to topic {}: {}", message.getId(), channelId, e.getMessage());
+        }
 
         return messageDto;
     }

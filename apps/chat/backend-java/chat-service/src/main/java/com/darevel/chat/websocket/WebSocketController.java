@@ -1,7 +1,6 @@
 package com.darevel.chat.websocket;
 
 import com.darevel.chat.dto.CallSignalDto;
-import com.darevel.chat.dto.MessageDto;
 import com.darevel.chat.dto.SendMessageRequest;
 import com.darevel.chat.service.ChatService;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +19,8 @@ public class WebSocketController {
     private final SimpMessagingTemplate messagingTemplate;
 
     /**
-     * Receive a chat message, persist it via ChatService, and broadcast to the channel topic.
+     * Receive a chat message and persist it via ChatService.
+     * ChatService handles both persistence and broadcasting to avoid duplication.
      */
     @MessageMapping("/chat/{channelId}/send")
     public void sendMessage(
@@ -29,14 +29,10 @@ public class WebSocketController {
 
         log.info("💬 Message received for channel: {}", channelId);
 
-        // Persist message (ChatService may handle encryption per your policy)
-        MessageDto saved = chatService.sendMessage(channelId, request);
+        // Persist AND broadcast (ChatService will broadcast)
+        chatService.sendMessage(channelId, request);
 
-        // Broadcast to all subscribers of that channel
-        String destination = "/topic/messages/" + channelId;
-        messagingTemplate.convertAndSend(destination, saved);
-
-        log.info("💬 Broadcasted message {} to {}", saved.getId(), destination);
+        // NO convertAndSend() here to avoid duplicate broadcast
     }
 
     /**

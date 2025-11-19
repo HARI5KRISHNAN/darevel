@@ -1,5 +1,22 @@
 # Chat Service Security Features
 
+## Critical Fixes
+
+### ✅ Fixed: REST Messages Not Broadcasting to WebSocket Subscribers
+**Issue**: Messages sent via REST API (ChatController) were persisted but not broadcast to WebSocket subscribers in real-time.
+
+**Root Cause**: Only WebSocketController was broadcasting; ChatService.sendMessage() did not broadcast.
+
+**Solution**:
+- ChatService now broadcasts to `/topic/messages/{channelId}` after persisting messages
+- Removed duplicate broadcast from WebSocketController to prevent double-delivery
+- Both REST and WebSocket paths now produce identical real-time behavior
+
+**Impact**:
+- REST-sent messages now appear immediately for all subscribers
+- Single broadcast point ensures consistency
+- No duplicate message delivery
+
 ## WebSocket Security Enhancements
 
 ### Dynamic Destination Routing
@@ -7,6 +24,7 @@
 - **Improved**: Using `SimpMessagingTemplate` for dynamic destination resolution
 - Messages now correctly route to `/topic/messages/{channelId}`
 - Call signals route to `/topic/call-signal/{userId}`
+- Single broadcast point in ChatService prevents duplication
 
 ### WebSocket Endpoints
 - **Primary**: `ws://localhost:8082/ws` (raw WebSocket)
@@ -160,6 +178,114 @@ curl -X POST http://localhost:8082/api/chat/dm-1-2/messages \
 # Verify database stores ciphertext
 psql -d darevel_chat -c "SELECT content, encryption_iv, is_encrypted FROM messages ORDER BY id DESC LIMIT 1;"
 ```
+
+## Comprehensive Test Plan
+
+### Prerequisites
+1. Start all services: auth-service (8081), chat-service (8082), PostgreSQL
+2. Run database migrations to add encryption fields (see Database Schema Updates above)
+3. Have two browser tabs/windows ready for User A and User B
+
+### Test 1: REST Message Broadcasting (Critical Fix)
+**Purpose**: Verify REST-sent messages broadcast to WebSocket subscribers in real-time
+
+**Steps**:
+1. User A subscribes to WebSocket: `/topic/messages/dm-1-2`
+2. User B sends message via REST API:
+   ```bash
+   curl -X POST http://localhost:8082/api/chat/dm-1-2/messages \
+     -H "Content-Type: application/json" \
+     -d '{"userId":2,"content":"Hello from REST!"}'
+   ```
+3. **Expected**: User A receives message immediately via WebSocket
+4. **Verify logs**: Look for `💬 Broadcasted (from ChatService) message X to /topic/messages/dm-1-2`
+
+**Pass Criteria**: ✅ Message appears in User A's UI within 1 second
+
+### Test 2: WebSocket Message Broadcasting
+**Purpose**: Verify WebSocket-sent messages work correctly
+
+**Steps**:
+1. User A subscribes to `/topic/messages/dm-1-2`
+2. User B sends via STOMP: `/app/chat/dm-1-2/send`
+3. **Expected**: User A receives message immediately
+4. **Verify logs**: Single broadcast log, no duplicates
+
+**Pass Criteria**: ✅ Message appears once (not duplicated)
+
+### Test 3: No Duplicate Broadcasts
+**Purpose**: Ensure messages aren't delivered twice
+
+**Steps**:
+1. User A subscribes to `/topic/messages/dm-1-2`
+2. User B sends message (REST or WebSocket)
+3. Count message deliveries in User A's subscription handler
+
+**Pass Criteria**: ✅ Exactly 1 message received (not 2)
+
+### Test 4: Call Signaling
+**Purpose**: Verify WebRTC call signaling works
+
+**Steps**:
+1. User A (ID=1) subscribes to `/topic/call-signal/2`
+2. User B initiates call via `/app/call-signal/2`:
+   ```javascript
+   stompClient.send('/app/call-signal/2', {}, JSON.stringify({
+       type: 'offer',
+       from: 1,
+       to: 2,
+       channelId: 'dm-1-2',
+       callType: 'audio',
+       offer: { type: 'offer', sdp: '...' }
+   }));
+   ```
+3. **Expected**: User A receives call signal
+4. **Verify logs**: `📞 CALL SIGNAL RECEIVED` and `📞 Relayed call signal`
+
+**Pass Criteria**: ✅ Call signal delivered correctly
+
+### Test 5: Server-Side Encryption (Optional)
+**Purpose**: Verify encryption when enabled
+
+**Setup**: Set `CHAT_ENCRYPTION_ENABLED=true`
+
+**Steps**:
+1. Send message via REST
+2. Check database:
+   ```sql
+   SELECT id, content, encryption_iv, wrapped_message_key, is_encrypted
+   FROM messages ORDER BY id DESC LIMIT 1;
+   ```
+3. **Expected**:
+   - `content` is base64 ciphertext
+   - `encryption_iv` is populated
+   - `is_encrypted` = true
+4. Retrieve message via GET `/api/chat/dm-1-2/messages`
+5. **Expected**: Response shows plaintext (server decrypts)
+
+**Pass Criteria**:
+- ✅ Database stores ciphertext
+- ✅ API returns decrypted plaintext
+
+### Test 6: Multi-User Broadcasting
+**Purpose**: Verify messages reach all subscribers
+
+**Steps**:
+1. User A, User B, User C all subscribe to `/topic/messages/dm-1-2`
+2. User A sends message
+3. **Expected**: Both B and C receive message
+
+**Pass Criteria**: ✅ All subscribers receive message
+
+### Test 7: Connection Resilience
+**Purpose**: Test SockJS fallback
+
+**Steps**:
+1. Disable WebSocket in browser dev tools
+2. Connect using SockJS fallback
+3. Send/receive messages
+
+**Pass Criteria**: ✅ SockJS fallback works correctly
 
 ## Security Warnings
 
