@@ -1,0 +1,27 @@
+services:
+  suite-service:
+    build: .
+    container_name: darevel-suite-service
+    ports:
+      - "8085:8085"
+    environment:
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-5436}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:-http://host.docker.internal:8180/realms/darevel}
+      KEYCLOAK_JWK_SET_URI: ${KEYCLOAK_JWK_SET_URI:-http://host.docker.internal:8180/realms/darevel/protocol/openid-connect/certs}
+      SERVER_PORT: ${SERVER_PORT:-8085}
+      CHAT_SERVICE_URL: ${CHAT_SERVICE_URL:-http://host.docker.internal:3003}
+      MAIL_SERVICE_URL: ${MAIL_SERVICE_URL:-http://host.docker.internal:3008}
+      SHEET_SERVICE_URL: ${SHEET_SERVICE_URL:-http://host.docker.internal:3004}
+      SLIDES_SERVICE_URL: ${SLIDES_SERVICE_URL:-http://host.docker.internal:3000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8085/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

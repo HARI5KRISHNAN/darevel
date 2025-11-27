@@ -1,0 +1,67 @@
+server:
+  port: ${SERVER_PORT:8086}
+
+spring:
+  application:
+    name: mail-service
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    date-format: "yyyy-MM-dd'T'HH:mm:ss"
+  datasource:
+    url: jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:darevel_mail}
+    username: ${PGUSER:postgres}
+    password: ${PGPASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  # Keycloak OAuth2 Resource Server Configuration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/darevel}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/darevel/protocol/openid-connect/certs}
+
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+# IMAP Configuration
+imap:
+  host: ${IMAP_HOST:localhost}
+  port: ${IMAP_PORT:143}
+  ssl: ${IMAP_SSL:false}
+
+# Mail Domain
+mail:
+  domain: ${MAIL_DOMAIN:darevel.local}
+
+# Jitsi Configuration
+jitsi:
+  domain: ${JITSI_DOMAIN:localhost}
+  port: ${JITSI_PORT:8000}
+  secure: ${JITSI_SECURE:false}
+  app-id: ${JITSI_APP_ID:darevel}
+  secret: ${JITSI_SECRET:DarevelJitsiSecretKey_2024_MinLength32Chars!}
+
+# Logging
+logging:
+  level:
+    com.darevel.mail: DEBUG
+    org.springframework.web: INFO

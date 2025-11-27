@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./apps/chat/backend-java/docker-service
+      dockerfile: Dockerfile
+    container_name: docker-service-backend
+    ports:
+      - "8083:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - SERVER_PORT=8080
+      - KUBECONFIG=/home/spring/.kube/config
+    volumes:
+      # Mount Docker socket for Docker API access
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Mount kubeconfig for Kubernetes/OpenShift access
+      # For Windows: ${USERPROFILE}/.kube/config
+      # For Linux/Mac: ${HOME}/.kube/config or ~/.kube/config
+      - ${USERPROFILE}/.kube/config:/home/spring/.kube/config:ro
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./apps/chat
+      dockerfile: Dockerfile
+    container_name: docker-service-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - BACKEND_URL=http://backend:8080
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,22 @@
+services:
+  postgres-slides:
+    image: postgres:15-alpine
+    container_name: darevel-postgres-slides
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: darevel_slides
+    ports:
+      - "5435:5432"
+    volumes:
+      - darevel-postgres-slides-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  darevel-postgres-slides-data:
+    driver: local

@@ -1,0 +1,287 @@
+version: '3.8'
+
+services:
+  # Auth Service - uses infrastructure postgres
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    container_name: darevel-auth-service
+    environment:
+      - DB_HOST=darevel-postgres-infra
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=darevel_chat
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3003}
+      - KEYCLOAK_ISSUER_URI=http://darevel-keycloak-infra:8080/realms/darevel
+      - KEYCLOAK_JWK_SET_URI=http://darevel-keycloak-infra:8080/realms/darevel/protocol/openid-connect/certs
+    ports:
+      - "8081:8086"
+    networks:
+      - darevel-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Chat Service - uses infrastructure postgres
+  chat-service:
+    build:
+      context: .
+      dockerfile: chat-service/Dockerfile
+    container_name: darevel-chat-service
+    environment:
+      - DB_HOST=darevel-postgres-infra
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=darevel_chat
+      - AUTH_SERVICE_URL=http://auth-service:8086
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3003}
+      - KEYCLOAK_ISSUER_URI=http://darevel-keycloak-infra:8080/realms/darevel
+      - KEYCLOAK_JWK_SET_URI=http://darevel-keycloak-infra:8080/realms/darevel/protocol/openid-connect/certs
+    ports:
+      - "8082:8081"
+    depends_on:
+      auth-service:
+        condition: service_started
+    networks:
+      - darevel-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Permissions Service - uses infrastructure postgres
+  permissions-service:
+    build:
+      context: .
+      dockerfile: permissions-service/Dockerfile
+    container_name: darevel-permissions-service
+    environment:
+      - DB_HOST=darevel-postgres-infra
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=darevel_chat
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3003}
+    ports:
+      - "8083:8083"
+    networks:
+      - darevel-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    volumes:
+      # Mount Ansible playbooks if needed
+      - ./ansible:/app/src/ansible:ro
+
+  # Docker Service - for container management API
+  docker-service:
+    build:
+      context: .
+      dockerfile: docker-service/Dockerfile
+    container_name: darevel-docker-service
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3003}
+      - SERVER_PORT=8089
+    ports:
+      - "8089:8089"
+    networks:
+      - darevel-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8089/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    volumes:
+      # Mount Docker socket for container management
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  # Kubernetes Service
+  kubernetes-service:
+    build:
+      context: .
+      dockerfile: kubernetes-service/Dockerfile
+    container_name: darevel-kubernetes-service
+    environment:
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3003}
+    ports:
+      - "8084:8084"
+    networks:
+      - darevel-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    volumes:
+      # Mount kubeconfig if running outside cluster
+      - ~/.kube/config:/root/.kube/config:ro
+
+  # Alerts Service
+  alerts-service:
+    build:
+      context: .
+      dockerfile: alerts-service/Dockerfile
+    container_name: darevel-alerts-service
+    environment:
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3003}
+    ports:
+      - "8085:8085"
+    networks:
+      - darevel-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Incidents Service
+  incidents-service:
+    build:
+      context: .
+      dockerfile: incidents-service/Dockerfile
+    container_name: darevel-incidents-service
+    environment:
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3003}
+    ports:
+      - "8086:8086"
+    networks:
+      - darevel-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # AI Service (with Ollama)
+  ai-service:
+    build:
+      context: .
+      dockerfile: ai-service/Dockerfile
+    container_name: darevel-ai-service
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama2
+    ports:
+      - "8087:8087"
+    depends_on:
+      - ollama
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  # Email Service
+  email-service:
+    build:
+      context: .
+      dockerfile: email-service/Dockerfile
+    container_name: darevel-email-service
+    environment:
+      - MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME:-}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+      - MAIL_FROM=${MAIL_FROM:-noreply@darevel.com}
+    ports:
+      - "8088:8088"
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  # Ollama AI Service
+  ollama:
+    image: ollama/ollama:latest
+    container_name: darevel-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  # Nginx API Gateway
+  nginx:
+    image: nginx:alpine
+    container_name: darevel-nginx-gateway
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth-service
+      - chat-service
+      - permissions-service
+      - kubernetes-service
+      - alerts-service
+      - incidents-service
+      - ai-service
+      - email-service
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  # Prometheus (Optional - for metrics monitoring)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: darevel-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  # Grafana (Optional - for metrics visualization)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: darevel-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - darevel-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  ollama_data:
+
+networks:
+  darevel-network:
+    external: true

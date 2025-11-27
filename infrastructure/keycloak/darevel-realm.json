@@ -1,0 +1,237 @@
+{
+  "realm": "darevel",
+  "enabled": true,
+  "displayName": "Darevel",
+  "displayNameHtml": "<strong>Darevel</strong>",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginTheme": "darevel-login",
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 30,
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "Regular user"
+      },
+      {
+        "name": "admin",
+        "description": "Administrator"
+      }
+    ]
+  },
+  "defaultRoles": ["user"],
+  "clients": [
+    {
+      "clientId": "darevel-chat",
+      "name": "Darevel Chat",
+      "description": "Chat application client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "rootUrl": "http://localhost:3003",
+      "baseUrl": "http://localhost:3003",
+      "redirectUris": [
+        "http://localhost:3003/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3003"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3003/*"
+      }
+    },
+    {
+      "clientId": "darevel-mail",
+      "name": "Darevel Mail",
+      "description": "Email application client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "rootUrl": "http://localhost:3008",
+      "baseUrl": "http://localhost:3008",
+      "redirectUris": [
+        "http://localhost:3008/*",
+        "https://localhost:3008/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3008",
+        "https://localhost:3008"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3008/*"
+      }
+    },
+    {
+      "clientId": "darevel-sheet",
+      "name": "Darevel Sheet",
+      "description": "Spreadsheet application client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "rootUrl": "http://localhost:3004",
+      "baseUrl": "http://localhost:3004",
+      "redirectUris": [
+        "http://localhost:3004/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3004"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3004/*"
+      }
+    },
+    {
+      "clientId": "darevel-slides",
+      "name": "Darevel Slides",
+      "description": "Presentation application client",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "secret": "darevel-slides-secret",
+      "rootUrl": "http://localhost:3000",
+      "baseUrl": "http://localhost:3000",
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:3000/api/auth/callback/keycloak"
+      ],
+      "webOrigins": [
+        "http://localhost:3000"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3000/*",
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "darevel-suite",
+      "name": "Darevel Suite",
+      "description": "Suite portal application client",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "secret": "darevel-suite-secret",
+      "rootUrl": "http://localhost:3002",
+      "baseUrl": "http://localhost:3002",
+      "redirectUris": [
+        "http://localhost:3002/*",
+        "http://localhost:3002/api/auth/callback/keycloak"
+      ],
+      "webOrigins": [
+        "http://localhost:3002"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3002/*",
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "darevel-jitsi",
+      "name": "Darevel Jitsi",
+      "description": "Jitsi Meet video conferencing client",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "secret": "darevel-jitsi-secret",
+      "rootUrl": "http://localhost:8000",
+      "baseUrl": "http://localhost:8000",
+      "redirectUris": [
+        "http://localhost:8000/*",
+        "http://localhost:8000/room/*"
+      ],
+      "webOrigins": [
+        "http://localhost:8000"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:8000/*"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "email": "alice@darevel.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Alice",
+      "lastName": "Smith",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "bob",
+      "email": "bob@darevel.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Bob",
+      "lastName": "Johnson",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "admin",
+      "email": "admin@darevel.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Admin",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["user", "admin"]
+    }
+  ]
+}

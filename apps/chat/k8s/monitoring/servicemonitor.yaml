@@ -1,0 +1,23 @@
+# ServiceMonitor for Darevel Chat Backend
+# Tells Prometheus to scrape metrics from Darevel Chat backend pods
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: darevel-chat-backend-monitor
+  namespace: darevel-chat
+  labels:
+    app: darevel-chat
+    component: backend
+    release: prometheus  # Must match your Prometheus operator's release label
+spec:
+  selector:
+    matchLabels:
+      app: darevel-chat
+      component: backend
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+      scheme: http

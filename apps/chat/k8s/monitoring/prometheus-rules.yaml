@@ -1,0 +1,228 @@
+# PrometheusRule for Darevel Chat Alerting
+# Defines alert conditions for Darevel Chat application and Kubernetes pods
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: darevel-chat-alerts
+  namespace: darevel-chat
+  labels:
+    app: darevel-chat
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+    # Darevel Chat Application Alerts
+    - name: darevel-chat.application
+      interval: 30s
+      rules:
+        - alert: Darevel ChatBackendDown
+          expr: up{job="darevel-chat-backend"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            component: backend
+          annotations:
+            summary: "Darevel Chat Backend is down"
+            description: "Darevel Chat backend service has been down for more than 2 minutes."
+            action: "Check backend pod logs: kubectl logs -n darevel-chat -l app=darevel-chat,component=backend"
+
+        - alert: Darevel ChatHighErrorRate
+          expr: |
+            rate(darevel-chat_http_requests_total{status=~"5.."}[5m])
+            /
+            rate(darevel-chat_http_requests_total[5m])
+            > 0.05
+          for: 5m
+          labels:
+            severity: warning
+            component: backend
+          annotations:
+            summary: "High error rate in Darevel Chat backend"
+            description: "More than 5% of requests are returning 5xx errors for 5 minutes."
+
+        - alert: Darevel ChatSlowRequests
+          expr: |
+            histogram_quantile(0.95,
+              rate(darevel-chat_http_request_duration_seconds_bucket[5m])
+            ) > 5
+          for: 5m
+          labels:
+            severity: warning
+            component: backend
+          annotations:
+            summary: "Darevel Chat requests are slow"
+            description: "95th percentile of request duration is above 5 seconds."
+
+        - alert: Darevel ChatHighMemoryUsage
+          expr: |
+            container_memory_usage_bytes{pod=~"darevel-chat-backend.*"}
+            /
+            container_spec_memory_limit_bytes{pod=~"darevel-chat-backend.*"}
+            > 0.90
+          for: 5m
+          labels:
+            severity: warning
+            component: backend
+          annotations:
+            summary: "Darevel Chat backend high memory usage"
+            description: "Pod {{ $labels.pod }} is using more than 90% of its memory limit."
+
+        - alert: Darevel ChatHighCPUUsage
+          expr: |
+            rate(container_cpu_usage_seconds_total{pod=~"darevel-chat-backend.*"}[5m]) > 0.8
+          for: 5m
+          labels:
+            severity: warning
+            component: backend
+          annotations:
+            summary: "Darevel Chat backend high CPU usage"
+            description: "Pod {{ $labels.pod }} is using more than 80% CPU for 5 minutes."
+
+    # Kubernetes Pod Alerts
+    - name: darevel-chat.kubernetes
+      interval: 30s
+      rules:
+        - alert: PodDown
+          expr: |
+            kube_pod_status_phase{namespace=~".*", phase="Failed"} > 0
+          for: 1m
+          labels:
+            severity: critical
+            type: pod_failure
+          annotations:
+            summary: "Pod Failure Detected"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has failed."
+            namespace: "{{ $labels.namespace }}"
+            pod: "{{ $labels.pod }}"
+
+        - alert: PodCrashLooping
+          expr: |
+            rate(kube_pod_container_status_restarts_total{namespace=~".*"}[15m]) > 0
+          for: 5m
+          labels:
+            severity: warning
+            type: pod_crash_loop
+          annotations:
+            summary: "Pod is crash looping"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is restarting frequently."
+            namespace: "{{ $labels.namespace }}"
+            pod: "{{ $labels.pod }}"
+
+        - alert: PodPending
+          expr: |
+            kube_pod_status_phase{namespace=~".*", phase="Pending"} > 0
+          for: 10m
+          labels:
+            severity: warning
+            type: pod_pending
+          annotations:
+            summary: "Pod stuck in Pending state"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been pending for more than 10 minutes."
+            namespace: "{{ $labels.namespace }}"
+            pod: "{{ $labels.pod }}"
+
+        - alert: HighPodMemory
+          expr: |
+            container_memory_usage_bytes{namespace=~".*"}
+            /
+            container_spec_memory_limit_bytes{namespace=~".*"}
+            > 0.90
+          for: 5m
+          labels:
+            severity: warning
+            type: high_memory
+          annotations:
+            summary: "Pod high memory usage"
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} ({{ $labels.namespace }}) is using {{ $value | humanizePercentage }} of memory limit."
+            namespace: "{{ $labels.namespace }}"
+            pod: "{{ $labels.pod }}"
+            container: "{{ $labels.container }}"
+
+        - alert: HighPodCPU
+          expr: |
+            rate(container_cpu_usage_seconds_total{namespace=~".*"}[5m]) > 0.90
+          for: 10m
+          labels:
+            severity: warning
+            type: high_cpu
+          annotations:
+            summary: "Pod high CPU usage"
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} ({{ $labels.namespace }}) is using high CPU."
+            namespace: "{{ $labels.namespace }}"
+            pod: "{{ $labels.pod }}"
+            container: "{{ $labels.container }}"
+
+    # AI Service Alerts
+    - name: darevel-chat.ai
+      interval: 30s
+      rules:
+        - alert: GeminiAPIErrors
+          expr: |
+            rate(darevel-chat_ai_summary_requests_total{status="error"}[5m]) > 0.1
+          for: 5m
+          labels:
+            severity: warning
+            component: ai
+          annotations:
+            summary: "High error rate from Gemini API"
+            description: "Gemini API is returning errors at a high rate. Check API key and quota."
+
+        - alert: SlowAIResponses
+          expr: |
+            histogram_quantile(0.95,
+              rate(darevel-chat_ai_api_latency_seconds_bucket[5m])
+            ) > 10
+          for: 5m
+          labels:
+            severity: warning
+            component: ai
+          annotations:
+            summary: "Slow AI API responses"
+            description: "95th percentile of AI API latency is above 10 seconds."
+
+    # Email Service Alerts
+    - name: darevel-chat.email
+      interval: 30s
+      rules:
+        - alert: EmailServiceUnreachable
+          expr: |
+            rate(darevel-chat_emails_sent_total{status="failed"}[5m])
+            /
+            rate(darevel-chat_emails_sent_total[5m])
+            > 0.5
+          for: 5m
+          labels:
+            severity: warning
+            component: email
+          annotations:
+            summary: "High email failure rate"
+            description: "More than 50% of emails are failing to send. Check EMAIL_APP_URL configuration."
+
+    # Incident Alerts
+    - name: darevel-chat.incidents
+      interval: 30s
+      rules:
+        - alert: HighIncidentRate
+          expr: |
+            rate(darevel-chat_incidents_created_total[15m]) > 5
+          for: 5m
+          labels:
+            severity: warning
+            component: incidents
+          annotations:
+            summary: "High incident creation rate"
+            description: "More than 5 incidents are being created per 15 minutes. Cluster may be unstable."
+
+        - alert: HighMTTR
+          expr: |
+            histogram_quantile(0.95,
+              rate(darevel-chat_incident_mttr_seconds_bucket{severity="critical"}[1h])
+            ) > 3600
+          for: 10m
+          labels:
+            severity: warning
+            component: incidents
+          annotations:
+            summary: "High Mean Time To Recovery"
+            description: "95th percentile MTTR for critical incidents is above 1 hour."

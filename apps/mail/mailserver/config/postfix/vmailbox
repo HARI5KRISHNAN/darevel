@@ -1,0 +1,6 @@
+# Virtual mailbox mapping for darevel.local
+# Format: email@domain maildir_path
+
+alice@darevel.local darevel.local/alice/
+bob@darevel.local darevel.local/bob/
+charlie@darevel.local darevel.local/charlie/

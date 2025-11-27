@@ -1,0 +1,37 @@
+version: '3.8'
+
+# Lightweight services for mail app development
+# Run with: docker-compose -f docker-compose.services.yml up -d
+
+services:
+  # PostgreSQL Database for mail-service
+  postgres:
+    image: postgres:15-alpine
+    container_name: darevel-mail-postgres
+    environment:
+      POSTGRES_DB: darevel_mail
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - darevel-mail-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d darevel_mail"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # MailHog for testing emails (SMTP + Web UI)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: darevel-mail-mailhog
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI at http://localhost:8025
+    restart: unless-stopped
+
+volumes:
+  darevel-mail-postgres-data:
+    driver: local

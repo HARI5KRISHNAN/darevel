@@ -1,0 +1,3 @@
+com\darevel\dashboard\config\CorsConfig.class
+com\darevel\dashboard\DashboardServiceApplication.class
+com\darevel\dashboard\controller\HealthController.class

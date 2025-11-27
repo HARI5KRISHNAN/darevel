@@ -1,0 +1,64 @@
+services:
+  # PostgreSQL Database - For Keycloak only (application databases use darevel-postgres on port 5432)
+  postgres:
+    image: postgres:15-alpine
+    container_name: darevel-postgres-infra
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - darevel-postgres-infra:/var/lib/postgresql/data
+      - ./init-databases.sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - darevel-network
+
+  # Keycloak - OpenID Connect SSO for all apps
+  keycloak:
+    image: quay.io/keycloak/keycloak:22.0
+    container_name: darevel-keycloak-infra
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: "jdbc:postgresql://postgres:5432/keycloak"
+      KC_DB_USERNAME: ${POSTGRES_USER:-postgres}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_HTTP_RELATIVE_PATH: "/"
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    ports:
+      - "${KEYCLOAK_PORT:-8180}:8080"
+    volumes:
+      - ./keycloak/darevel-realm.json:/opt/keycloak/data/import/darevel-realm.json:ro
+      - ./keycloak/themes/darevel-login:/opt/keycloak/themes/darevel-login:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command:
+      - start-dev
+      - --import-realm
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      - darevel-network
+
+networks:
+  darevel-network:
+    driver: bridge
+    name: darevel-network
+
+volumes:
+  darevel-postgres-infra:
+    driver: local

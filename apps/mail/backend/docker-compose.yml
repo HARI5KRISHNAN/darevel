@@ -1,0 +1,36 @@
+services:
+  mail-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: darevel-mail-service
+    ports:
+      - "8086:8086"
+    environment:
+      SERVER_PORT: ${SERVER_PORT:-8086}
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-5437}
+      PGHOST: ${PGHOST:-host.docker.internal}
+      PGPORT: ${PGPORT:-5437}
+      PGUSER: ${PGUSER:-postgres}
+      PGPASSWORD: ${PGPASSWORD:-postgres}
+      PGDATABASE: ${PGDATABASE:-darevel_mail}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:-http://host.docker.internal:8180/realms/darevel}
+      KEYCLOAK_JWK_SET_URI: ${KEYCLOAK_JWK_SET_URI:-http://host.docker.internal:8180/realms/darevel/protocol/openid-connect/certs}
+      SMTP_HOST: ${SMTP_HOST:-localhost}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      IMAP_HOST: ${IMAP_HOST:-localhost}
+      IMAP_PORT: ${IMAP_PORT:-143}
+      JITSI_DOMAIN: ${JITSI_DOMAIN:-localhost}
+      JITSI_PORT: ${JITSI_PORT:-8000}
+      JITSI_APP_ID: ${JITSI_APP_ID:-darevel}
+      JITSI_SECRET: ${JITSI_SECRET:-DarevelJitsiSecretKey_2024_MinLength32Chars!}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8086/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

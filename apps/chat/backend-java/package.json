@@ -1,0 +1,40 @@
+{
+  "name": "darevel-chat-backend-java",
+  "version": "1.0.0",
+  "description": "Java Spring Boot Microservices Backend for Darevel Chat",
+  "scripts": {
+    "dev": "npm run docker:up",
+    "dev:local": "concurrently \"npm run db:start\" \"npm run wait-for-db\" \"npm run services:start\"",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:build": "docker-compose build",
+    "db:start": "docker run -d --name darevel-postgres -e POSTGRES_USER=darevel_chat -e POSTGRES_PASSWORD=darevel_chat123 -e POSTGRES_DB=darevel_chat -p 5432:5432 postgres:15-alpine 2>/dev/null || docker start darevel-postgres",
+    "db:stop": "docker stop darevel-postgres",
+    "db:remove": "docker rm -f darevel-postgres",
+    "wait-for-db": "node scripts/wait-for-db.js",
+    "services:start": "concurrently -n auth,chat,perms -c blue,green,yellow \"cd auth-service && mvn spring-boot:run\" \"cd chat-service && mvn spring-boot:run\" \"cd permissions-service && mvn spring-boot:run\"",
+    "services:build": "mvn clean install",
+    "auth:dev": "cd auth-service && mvn spring-boot:run",
+    "chat:dev": "cd chat-service && mvn spring-boot:run",
+    "permissions:dev": "cd permissions-service && mvn spring-boot:run",
+    "test": "mvn test",
+    "clean": "mvn clean",
+    "health": "node scripts/health-check.js",
+    "setup": "npm run services:build && npm run docker:up",
+    "stop": "docker-compose down"
+  },
+  "keywords": [
+    "spring-boot",
+    "microservices",
+    "java",
+    "websocket",
+    "chat",
+    "postgresql"
+  ],
+  "author": "Darevel Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

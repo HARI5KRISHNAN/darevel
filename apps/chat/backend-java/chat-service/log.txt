@@ -1,0 +1,53 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------------------< com.darevel:chat-service >----------------------
+[INFO] Building Darevel Chat - Chat Service 1.0.0
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot-maven-plugin:3.2.1:run (default-cli) > test-compile @ chat-service >>>
+[INFO] 
+[INFO] --- maven-resources-plugin:2.6:resources (default-resources) @ chat-service ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 1 resource
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.11.0:compile (default-compile) @ chat-service ---
+[INFO] Changes detected - recompiling the module! :source
+[INFO] Compiling 30 source files with javac [debug target 17] to target\classes
+[INFO] /C:/Users/acer/Downloads/darevel-main/darevel-main/apps/chat/backend-java/chat-service/src/main/java/com/darevel/chat/service/ChatService.java: C:\Users\acer\Downloads\darevel-main\darevel-main\apps\chat\backend-java\chat-service\src\main\java\com\darevel\chat\service\ChatService.java uses unchecked or unsafe operations.
+[INFO] /C:/Users/acer/Downloads/darevel-main/darevel-main/apps/chat/backend-java/chat-service/src/main/java/com/darevel/chat/service/ChatService.java: Recompile with -Xlint:unchecked for details.
+[INFO] -------------------------------------------------------------
+[WARNING] COMPILATION WARNING : 
+[INFO] -------------------------------------------------------------
+[WARNING] location of system modules is not set in conjunction with -source 17
+  not setting the location of system modules may lead to class files that cannot run on JDK 17
+    --release 17 is recommended instead of -source 17 -target 17 because it sets the location of system modules automatically
+[INFO] 1 warning
+[INFO] -------------------------------------------------------------
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /C:/Users/acer/Downloads/darevel-main/darevel-main/apps/chat/backend-java/chat-service/src/main/java/com/darevel/chat/service/ChatService.java:[77,27] constructor Message in class com.darevel.chat.model.Message cannot be applied to given types;
+  required: java.lang.Long,java.lang.String,java.lang.Long,java.lang.String,java.time.LocalDateTime,java.lang.Boolean,java.lang.String,java.lang.String,java.lang.Boolean,java.lang.String,java.lang.String,java.lang.String
+  found:    no arguments
+  reason: actual and formal argument lists differ in length
+[INFO] 1 error
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  4.081 s
+[INFO] Finished at: 2025-11-24T21:11:42+05:30
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.11.0:compile (default-compile) on project chat-service: Compilation failure
+[ERROR] /C:/Users/acer/Downloads/darevel-main/darevel-main/apps/chat/backend-java/chat-service/src/main/java/com/darevel/chat/service/ChatService.java:[77,27] constructor Message in class com.darevel.chat.model.Message cannot be applied to given types;
+[ERROR]   required: java.lang.Long,java.lang.String,java.lang.Long,java.lang.String,java.time.LocalDateTime,java.lang.Boolean,java.lang.String,java.lang.String,java.lang.Boolean,java.lang.String,java.lang.String,java.lang.String
+[ERROR]   found:    no arguments
+[ERROR]   reason: actual and formal argument lists differ in length
+[ERROR] 
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

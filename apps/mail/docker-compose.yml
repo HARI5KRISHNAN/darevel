@@ -1,0 +1,131 @@
+services:
+  # Using darevel-postgres-infra from infrastructure (database: darevel_mail)
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: darevel-mailhog-mail
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8025"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: darevel-backend-mail
+    ports:
+      - "8081:8081"
+      - "2525:2525"
+    environment:
+      - PORT=8081
+      - PGHOST=darevel-postgres-infra
+      - PGPORT=5432
+      - PGUSER=postgres
+      - PGPASSWORD=postgres
+      - PGDATABASE=darevel_mail
+      - SMTP_HOST=postfix
+      - SMTP_PORT=25
+      - SMTP_SECURE=false
+      - SMTP_FROM=no-reply@darevel.local
+      - IMAP_HOST=dovecot
+      - IMAP_PORT=143
+      - IMAP_SECURE=false
+      - MAIL_DOMAIN=darevel.local
+      - SMTP_RECEIVER_PORT=2525
+      - SESSION_SECRET=your_random_secret_change_this_in_production
+      - JITSI_JWT_SECRET=${JITSI_JWT_SECRET:-darevel_jitsi_secret_key_2024_secure_256bit_min}
+      - JITSI_DOMAIN=${JITSI_DOMAIN:-localhost}
+      - JITSI_PORT=${JITSI_PORT:-8000}
+      - JITSI_SECURE=${JITSI_SECURE:-false}
+      - KEYCLOAK_ISSUER_URI=http://host.docker.internal:8180/realms/darevel
+      - KEYCLOAK_JWK_SET_URI=http://host.docker.internal:8180/realms/darevel/protocol/openid-connect/certs
+    depends_on:
+      postfix:
+        condition: service_healthy
+      dovecot:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8081/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  postfix:
+    image: boky/postfix:latest
+    container_name: darevel-postfix-mail
+    hostname: mail.darevel.local
+    restart: always
+    ports:
+      - "25:25"
+      - "587:587"
+    environment:
+      - ALLOWED_SENDER_DOMAINS=darevel.local
+      - ALLOW_EMPTY_SENDER_DOMAINS=true
+      - HOSTNAME=mail.darevel.local
+      - MYDOMAIN=darevel.local
+      - MYORIGIN=darevel.local
+      - MYNETWORKS=127.0.0.0/8 [::1]/128 172.0.0.0/8
+      - MYDESTINATION=mail.darevel.local, localhost.darevel.local, localhost
+      - LOCAL_RECIPIENT_MAPS=
+      - POSTFIX_virtual_mailbox_domains=darevel.local
+      - POSTFIX_virtual_mailbox_base=/var/mail/vhosts
+      - POSTFIX_virtual_mailbox_maps=lmdb:/etc/postfix/vmailbox
+      - POSTFIX_virtual_uid_maps=static:1000
+      - POSTFIX_virtual_gid_maps=static:1000
+      - POSTFIX_virtual_transport=virtual
+      - POSTFIX_virtual_mailbox_limit=0
+    volumes:
+      - ./mailserver/config/postfix/vmailbox:/etc/postfix/vmailbox:ro
+      - ./mailserver/data/maildir:/var/mail
+      - ./mailserver/init-postfix.sh:/docker-init.db/init-postfix.sh:ro
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "25"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  dovecot:
+    image: dovecot/dovecot:2.3.21
+    container_name: darevel-dovecot-mail
+    restart: always
+    ports:
+      - "143:143"
+      - "993:993"
+    volumes:
+      - ./mailserver/config/dovecot:/etc/dovecot:ro
+      - ./mailserver/data/maildir:/var/mail
+    healthcheck:
+      test: ["CMD", "doveadm", "auth", "test", "bob@darevel.local", "password"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  opendkim:
+    image: instrumentisto/opendkim:latest
+    container_name: darevel-opendkim-mail
+    hostname: opendkim.darevel.local
+    restart: always
+    ports:
+      - "8891:8891"
+    volumes:
+      - ./mailserver/config/opendkim:/etc/opendkim
+      - ./mailserver/config/opendkim/keys:/etc/opendkim/keys
+      - ./mailserver/config/opendkim/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8891"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  default:
+    external: true
+    name: darevel-network

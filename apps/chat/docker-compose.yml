@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: whooper-backend
+    ports:
+      - "5001:5001"
+    environment:
+      - NODE_ENV=production
+      - PORT=5001
+      # Kubernetes configuration (update with your cluster details)
+      - KUBECONFIG_PATH=${KUBECONFIG_PATH:-}
+      - K8S_NAMESPACE=${K8S_NAMESPACE:-default}
+      # Gemini AI configuration
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      # Email service configuration
+      - EMAIL_APP_URL=${EMAIL_APP_URL:-}
+      - DEFAULT_EMAIL_RECIPIENT=${DEFAULT_EMAIL_RECIPIENT:-}
+      - ALERT_EMAIL=${ALERT_EMAIL:-}
+    volumes:
+      # Mount kubeconfig for K8s access (adjust path as needed)
+      - ${HOME}/.kube:/root/.kube:ro
+    networks:
+      - whooper-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5001/api/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Service
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: whooper-frontend
+    ports:
+      - "80:80"
+    environment:
+      # Backend URL for API calls
+      - VITE_BACKEND_URL=http://localhost:5001
+    depends_on:
+      - backend
+    networks:
+      - whooper-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  whooper-network:
+    driver: bridge

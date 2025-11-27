@@ -1,0 +1,3 @@
+com\darevel\slides\controller\HealthController.class
+com\darevel\slides\config\CorsConfig.class
+com\darevel\slides\SlidesServiceApplication.class

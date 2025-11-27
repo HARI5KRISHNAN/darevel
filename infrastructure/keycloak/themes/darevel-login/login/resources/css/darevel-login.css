@@ -1,0 +1,166 @@
+:root {
+  --darevel-bg: #02040a;
+  --darevel-card: rgba(15, 18, 28, 0.72);
+  --darevel-card-border: rgba(255, 255, 255, 0.08);
+  --darevel-text: #f5f6fa;
+  --darevel-muted: rgba(245, 246, 250, 0.7);
+  --darevel-accent: #27f2a1;
+  --darevel-accent-soft: rgba(39, 242, 161, 0.2);
+}
+
+body.theme-darevel-login {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: radial-gradient(circle at top left, #0d1b2a 0%, #05060a 45%, #010104 100%);
+  color: var(--darevel-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+body.theme-darevel-login::before,
+body.theme-darevel-login::after {
+  content: '';
+  position: absolute;
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(39, 242, 161, 0.35), transparent 70%);
+  filter: blur(50px);
+  animation: float 12s ease-in-out infinite;
+}
+
+body.theme-darevel-login::before {
+  top: -120px;
+  right: -80px;
+}
+
+body.theme-darevel-login::after {
+  bottom: -140px;
+  left: -100px;
+  animation-delay: 3s;
+}
+
+@keyframes float {
+  0% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, 15px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+.darevel-login-wrapper {
+  position: relative;
+  width: min(420px, 90vw);
+  padding: 2.75rem;
+  background: var(--darevel-card);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--darevel-card-border);
+  border-radius: 28px;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.45);
+  z-index: 2;
+}
+
+.darevel-brand {
+  font-size: 0.95rem;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--darevel-muted);
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.darevel-login-wrapper h1 {
+  margin: 0;
+  font-size: 2rem;
+  text-align: center;
+  color: var(--darevel-text);
+}
+
+.darevel-subtitle {
+  text-align: center;
+  color: var(--darevel-muted);
+  margin: 0.5rem 0 2rem;
+  font-size: 0.95rem;
+}
+
+.darevel-form-group {
+  margin-bottom: 1.25rem;
+}
+
+.darevel-label {
+  display: block;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--darevel-muted);
+  margin-bottom: 0.4rem;
+}
+
+.darevel-input {
+  width: 100%;
+  padding: 0.95rem 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(3, 5, 11, 0.6);
+  color: var(--darevel-text);
+  font-size: 1rem;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.darevel-input:focus {
+  outline: none;
+  border-color: var(--darevel-accent);
+  box-shadow: 0 0 0 4px var(--darevel-accent-soft);
+}
+
+.darevel-submit {
+  width: 100%;
+  border: none;
+  border-radius: 18px;
+  padding: 1rem 1.2rem;
+  margin-top: 0.5rem;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #021412;
+  background: linear-gradient(120deg, #27f2a1, #70ffdd);
+  box-shadow: 0 10px 30px rgba(39, 242, 161, 0.35);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.darevel-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 35px rgba(39, 242, 161, 0.4);
+}
+
+.darevel-help {
+  margin-top: 1.5rem;
+  text-align: center;
+  color: var(--darevel-muted);
+  font-size: 0.85rem;
+}
+
+.darevel-help a {
+  color: var(--darevel-accent);
+  text-decoration: none;
+}
+
+.kc-logo-text {
+  display: none;
+}
+
+.login-pf-page .card-pf {
+  background: transparent;
+  box-shadow: none;
+}
+
+.login-pf-page .pf-c-alert {
+  margin-bottom: 1rem;
+  border-radius: 12px;
+}
+
+.darevel-alerts {
+  margin-bottom: 1.5rem;
+}

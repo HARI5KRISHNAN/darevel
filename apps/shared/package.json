@@ -1,0 +1,19 @@
+{
+  "name": "@darevel/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./meetings": "./meetings/index.ts",
+    "./video": "./video/index.ts",
+    "./jitsi": "./jitsi/index.ts"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2"
+  }
+}
