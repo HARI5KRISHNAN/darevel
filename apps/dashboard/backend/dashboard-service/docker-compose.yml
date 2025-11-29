@@ -1,0 +1,29 @@
+services:
+  dashboard-service:
+    build:
+      context: ../../../../
+      dockerfile: apps/dashboard/backend/dashboard-service/Dockerfile
+    container_name: darevel-dashboard-service
+    ports:
+      - "9410:9410"
+    environment:
+      DASHBOARD_SERVICE_PORT: ${DASHBOARD_SERVICE_PORT:-9410}
+      DASHBOARD_DB_URL: ${DASHBOARD_DB_URL:-jdbc:postgresql://host.docker.internal:5443/dashboard}
+      DASHBOARD_DB_USER: ${DASHBOARD_DB_USER:-dashboard}
+      DASHBOARD_DB_PASSWORD: ${DASHBOARD_DB_PASSWORD:-dashboard}
+      REDIS_HOST: ${REDIS_HOST:-host.docker.internal}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:-http://host.docker.internal:8180/realms/darevel}
+    networks:
+      - darevel-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9410/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  darevel-network:
+    driver: bridge

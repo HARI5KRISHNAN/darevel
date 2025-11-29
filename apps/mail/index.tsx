@@ -1,49 +1,50 @@
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import keycloak from './keycloak';
+import Keycloak from 'keycloak-js';
 
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
-}
+const keycloak = new Keycloak({
+  url: 'http://localhost:8180/',
+  realm: 'darevel',
+  clientId: 'darevel-mail',
+});
 
-// Initialize Keycloak before mounting the app
-keycloak.init({
-  onLoad: "login-required",
-  checkLoginIframe: false,
-  pkceMethod: 'S256',
-  redirectUri: window.location.origin + '/'
-}).then((authenticated) => {
-  if (authenticated) {
-    console.log("Authenticated as:", keycloak.tokenParsed?.preferred_username);
-    console.log("User email:", keycloak.tokenParsed?.email);
+keycloak
+  .init({
+    onLoad: 'login-required',
+    checkLoginIframe: false,
+  })
+  .then((authenticated) => {
+    if (!authenticated) {
+      window.location.reload();
+      return;
+    }
 
-    // Setup token refresh
+    // Token refresh
     setInterval(() => {
-      keycloak.updateToken(70).then((refreshed) => {
-        if (refreshed) {
-          console.log('Token refreshed');
-        }
-      }).catch(() => {
-        console.error('Failed to refresh token');
-        keycloak.login();
-      });
+      keycloak
+        .updateToken(70)
+        .then((refreshed) => {
+          if (refreshed) {
+            console.log('Token refreshed');
+          }
+        })
+        .catch(() => {
+          console.error('Failed to refresh token');
+          keycloak.login();
+        });
     }, 60000);
 
-    // Mount app
-    const root = ReactDOM.createRoot(rootElement);
-    root.render(
+    // Render app
+    ReactDOM.createRoot(document.getElementById('root')!).render(
       <React.StrictMode>
-        <App keycloak={keycloak} />
+        <App />
       </React.StrictMode>
     );
-  } else {
-    console.log("Not authenticated - redirecting to login");
-    keycloak.login();
-  }
-}).catch((err) => {
-  console.error("Keycloak init failed", err);
-  keycloak.login();
-});
+  })
+  .catch((error) => {
+    console.error('Failed to initialize Keycloak:', error);
+  });
+
+// Make keycloak available globally
+(window as any).keycloak = keycloak;

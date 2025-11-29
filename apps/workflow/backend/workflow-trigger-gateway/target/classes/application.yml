@@ -1,0 +1,17 @@
+server:
+  port: ${WORKFLOW_TRIGGER_GATEWAY_PORT:9403}
+
+spring:
+  application:
+    name: workflow-trigger-gateway
+  kafka:
+    bootstrap-servers: ${WORKFLOW_KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,prometheus"

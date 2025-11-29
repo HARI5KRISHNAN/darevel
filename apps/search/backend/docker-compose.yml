@@ -1,0 +1,59 @@
+version: "3.9"
+services:
+  search-db:
+    image: postgres:15
+    container_name: darevel-search-db
+    environment:
+      POSTGRES_DB: search
+      POSTGRES_USER: search
+      POSTGRES_PASSWORD: search
+    ports:
+      - "5446:5432"
+    volumes:
+      - search-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U search"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  search-redis:
+    image: redis:7-alpine
+    container_name: darevel-search-redis
+    ports:
+      - "6386:6379"
+
+  search-meili:
+    image: getmeili/meilisearch:v1.11
+    container_name: darevel-search-meili
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: masterKey
+    ports:
+      - "7710:7700"
+
+  search-service:
+    build:
+      context: ../../..
+      dockerfile: apps/search/backend/search-service/Dockerfile
+    environment:
+      DB_URL: jdbc:postgresql://search-db:5432/search
+      DB_USERNAME: search
+      DB_PASSWORD: search
+      REDIS_HOST: search-redis
+      REDIS_PORT: 6379
+      JWT_ISSUER_URI: http://host.docker.internal:8180/realms/darevel
+      MEILISEARCH_HOST: http://search-meili:7700
+      MEILISEARCH_API_KEY: masterKey
+    ports:
+      - "8095:8095"
+    depends_on:
+      search-db:
+        condition: service_healthy
+      search-redis:
+        condition: service_started
+      search-meili:
+        condition: service_started
+
+volumes:
+  search-db-data:

@@ -1,631 +1,594 @@
-
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import useUndo from 'use-undo';
-import { Spreadsheet } from './components/Spreadsheet';
-import { AIPanel } from './components/AIPanel';
-import { FormulaBar } from './components/FormulaBar';
-import { Toolbar } from './components/Toolbar';
-import { FileMenu } from './components/FileMenu';
-import { VersionHistoryModal } from './components/VersionHistoryModal';
-import { LoadSheetModal } from './components/LoadSheetModal';
-import { SheetData, SelectionArea, Merge, CellData, CellFormat } from './types';
-import { generateData } from './services/ollamaService';
-import { getNormalizedSelection, findMergeForCell, evaluateFormula } from './utils';
-import { useTheme } from './contexts/ThemeContext';
-import { versionHistory } from './services/versionHistory';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import Ribbon from './components/Ribbon';
+import AIAssistant from './components/AIAssistant';
+import MenuBar from './components/MenuBar';
+import FileDashboard from './components/FileDashboard';
+import TemplateGallery from './components/TemplateGallery';
+import ContextMenu from './components/ContextMenu';
+import { LeftSidebarPanel, RightSidebarPanel } from './components/SidebarPanels';
+import {
+  Sparkles, MessageSquare, Search, Plus,
+  Menu, Moon, Sun, Play, Settings,
+  PlusSquare, LayoutGrid, FileSpreadsheet,
+  Database, Table, Sigma, FunctionSquare,
+  ChevronDown, ArrowRight, Bold, Italic, Check,
+  Share2, ChevronRight as ChevronRightIcon, LogOut, Mail, User
+} from 'lucide-react';
+import { DocumentState, LeftPanelType, RightPanelType, Sheet, Cell } from './types';
+import sheetApi, { SheetRecord } from './src/services/api';
 import { useAuth } from './src/contexts/AuthContext';
-import apiService from './services/apiService';
 
-
-const INITIAL_ROWS = 50;
-const INITIAL_COLS = 26; // A-Z
+// Custom Geometric Logo Component
+const DarevelLogo = () => (
+  <svg width="42" height="42" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="transition-transform hover:scale-105">
+    <path d="M4 4H20V20Z" fill="#2563EB"/> 
+    <path d="M20 4H24C32.8 4 40 11.2 40 20H20V4Z" fill="#DC2626"/> 
+    <path d="M20 20H40C40 28.8 32.8 36 24 36H20V20Z" fill="#EAB308"/> 
+    <path d="M4 20H20V36H4V20Z" fill="#16A34A"/> 
+  </svg>
+);
 
 const App: React.FC = () => {
-  const { theme, toggleTheme, zoom, setZoom } = useTheme();
   const { user, logout } = useAuth();
-  const [currentSheetId, setCurrentSheetId] = useState<number | null>(null);
-  const [sheetName, setSheetName] = useState<string>('Untitled Spreadsheet');
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  // Create a properly initialized empty sheet
-  const createEmptySheet = (): SheetData => {
-    return Array.from({ length: INITIAL_ROWS }, () =>
-      Array.from({ length: INITIAL_COLS }, () => ({ value: '' }))
-    );
-  };
+  // GRID GENERATION CONSTANTS
+  const COLS = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+  const ROWS = Array.from({length: 40}, (_, i) => i + 1);
 
-  // Validate and load data from localStorage with permanent protection
-  const getInitialSheetData = (): SheetData => {
-    try {
-      const saved = localStorage.getItem('darevel-spreadsheet-data');
-
-      // Handle null, undefined, or empty string
-      if (!saved || saved === 'undefined' || saved === 'null') {
-        console.warn('No valid localStorage data found. Starting with empty sheet.');
-        localStorage.removeItem('darevel-spreadsheet-data');
-        return createEmptySheet();
-      }
-
-      const parsed = JSON.parse(saved);
-
-      // Validate structure: must be array of arrays with valid CellData objects
-      if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(row => Array.isArray(row))) {
-        // Ensure each row is an array and has proper CellData objects
-        const validated = parsed.map((row: any) => {
-          if (Array.isArray(row)) {
-            return row.map((cell: any) => {
-              // Ensure cell is an object with at least a value property
-              if (typeof cell === 'object' && cell !== null && 'value' in cell) {
-                return {
-                  value: String(cell.value || ''),
-                  formula: cell.formula,
-                  format: cell.format
-                };
-              }
-              // Fallback for old string-based cells or invalid data
-              return { value: String(cell || '') };
-            });
-          }
-          // Fallback for invalid rows
-          return Array.from({ length: INITIAL_COLS }, () => ({ value: '' }));
-        });
-
-        // Final validation: ensure we actually got a valid array with valid structure
-        if (Array.isArray(validated) && validated.length > 0 && validated.every(row => Array.isArray(row))) {
-          console.log('Successfully loaded spreadsheet data from localStorage');
-          return validated;
-        }
-      }
-
-      // If validation failed, clear corrupted data
-      console.warn('Invalid spreadsheet structure in localStorage. Resetting to empty sheet.');
-      localStorage.removeItem('darevel-spreadsheet-data');
-
-    } catch (error) {
-      console.error('Failed to parse localStorage data:', error);
-      // Clear corrupted data on any error (JSON parse errors, etc.)
-      localStorage.removeItem('darevel-spreadsheet-data');
+  const columnIndexToLetters = useCallback((index: number) => {
+    let result = '';
+    let current = index;
+    while (current >= 0) {
+      result = String.fromCharCode((current % 26) + 65) + result;
+      current = Math.floor(current / 26) - 1;
     }
-
-    // Always return a valid empty sheet as fallback
-    return createEmptySheet();
-  };
-
-  const getInitialMerges = (): Merge[] => {
-    try {
-      const saved = localStorage.getItem('darevel-spreadsheet-merges');
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (error) {
-      console.error('Failed to load merges from localStorage:', error);
-    }
-    return [];
-  };
-
-  // Use undo/redo for sheetData - with guaranteed valid initialization
-  const initialSheetData = useMemo(() => {
-    const initialData = getInitialSheetData();
-    // Double-check the initial data is valid before passing to use-undo
-    if (!Array.isArray(initialData) || initialData.length === 0) {
-      console.warn('getInitialSheetData returned invalid data, using fallback');
-      return createEmptySheet();
-    }
-    return initialData;
+    return result;
   }, []);
 
-  const [sheetDataState, { set: setSheetData, undo, redo, canUndo, canRedo }] = useUndo<SheetData>(initialSheetData);
-  const sheetData = sheetDataState.present;
-
-  // Safety check: ensure sheetData is always valid (only on mount)
-  useEffect(() => {
-    if (!Array.isArray(sheetData) || sheetData.length === 0) {
-      console.warn('Invalid sheetData detected after mount, resetting...', sheetData);
-      localStorage.removeItem('darevel-spreadsheet-data');
-      setSheetData(createEmptySheet());
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const lettersToColumnIndex = useCallback((letters: string) => {
+    return letters
+      .toUpperCase()
+      .split('')
+      .reduce((acc, char) => acc * 26 + (char.charCodeAt(0) - 64), 0) - 1;
   }, []);
 
-  const [selectionArea, setSelectionArea] = useState<SelectionArea>({ start: { row: 0, col: 0 }, end: { row: 0, col: 0 } });
-  const [merges, setMerges] = useState<Merge[]>(getInitialMerges());
-  const [isAILoading, setIsAILoading] = useState<boolean>(false);
-  const [aiError, setAiError] = useState<string | null>(null);
-  const [showLoadSheet, setShowLoadSheet] = useState(false);
-  const [showVersionHistory, setShowVersionHistory] = useState(false);
-
-  const updateCell = useCallback((row: number, col: number, value: string) => {
-    // Safety check: ensure sheetData is valid before processing
-    if (!Array.isArray(sheetData) || sheetData.length === 0) {
-      console.warn('Invalid sheetData in updateCell, using empty sheet');
-      setSheetData(createEmptySheet());
-      return;
-    }
-
-    let newData = sheetData.map(r => [...r]);
-
-    // Dynamically expand grid if needed
-    // Add rows if necessary
-    while (newData.length <= row) {
-      newData.push(Array.from({ length: newData[0]?.length || INITIAL_COLS }, () => ({ value: '' })));
-    }
-
-    // Add columns if necessary
-    if (newData[0] && newData[0].length <= col) {
-      const colsToAdd = col - newData[0].length + 1;
-      newData = newData.map(r => [
-        ...r,
-        ...Array.from({ length: colsToAdd }, () => ({ value: '' }))
-      ]);
-    }
-
-    const currentCell = newData[row]?.[col] || { value: '' };
-
-    // Check if the value is a formula
-    if (value.startsWith('=')) {
-      try {
-        // Evaluate the formula
-        const evaluatedValue = evaluateFormula(value, sheetData);
-        newData[row][col] = {
-          ...currentCell,
-          value: evaluatedValue,
-          formula: value // Store the original formula
-        };
-      } catch (error) {
-        // If formula evaluation fails, show error
-        newData[row][col] = {
-          ...currentCell,
-          value: '#ERROR!',
-          formula: value
-        };
-      }
-    } else {
-      // Regular value - clear any existing formula
-      newData[row][col] = {
-        ...currentCell,
-        value,
-        formula: undefined
-      };
-    }
-
-    setSheetData(newData);
-  }, [sheetData]);
-
-  const applyFormatToSelection = useCallback((format: Partial<CellFormat>) => {
-    // Safety check: ensure sheetData is valid before processing
-    if (!Array.isArray(sheetData) || sheetData.length === 0) {
-      console.warn('Invalid sheetData in applyFormatToSelection, using empty sheet');
-      setSheetData(createEmptySheet());
-      return;
-    }
-
-    let newData = sheetData.map(r => [...r]);
-    const { minRow, maxRow, minCol, maxCol } = getNormalizedSelection(selectionArea);
-
-    // Ensure grid is large enough for selection
-    while (newData.length <= maxRow) {
-      newData.push(Array.from({ length: newData[0]?.length || INITIAL_COLS }, () => ({ value: '' })));
-    }
-
-    if (newData[0] && newData[0].length <= maxCol) {
-      const colsToAdd = maxCol - newData[0].length + 1;
-      newData = newData.map(r => [
-        ...r,
-        ...Array.from({ length: colsToAdd }, () => ({ value: '' }))
-      ]);
-    }
-
-    for (let r = minRow; r <= maxRow; r++) {
-      for (let c = minCol; c <= maxCol; c++) {
-        const currentCell = newData[r]?.[c] || { value: '' };
-        const existingFormat = currentCell.format || {};
-        newData[r][c] = {
-          ...currentCell,
-          format: { ...existingFormat, ...format },
-        };
-      }
-    }
-
-    setSheetData(newData);
-  }, [selectionArea, sheetData]);
-  
-  const handleMergeCells = useCallback(() => {
-    const { minRow, maxRow, minCol, maxCol } = getNormalizedSelection(selectionArea);
-
-    const newMerge = {
-      start: { row: minRow, col: minCol },
-      end: { row: maxRow, col: maxCol },
+  const parseCellId = useCallback((cellId: string) => {
+    const match = cellId.match(/([A-Z]+)(\d+)/i);
+    if (!match) return null;
+    const [, letters, row] = match;
+    return {
+      rowIndex: Math.max(0, parseInt(row, 10) - 1),
+      colIndex: Math.max(0, lettersToColumnIndex(letters))
     };
+  }, [lettersToColumnIndex]);
 
-    // Remove any existing merges that overlap with the new one.
-    const nonOverlappingMerges = merges.filter(m => {
-      const overlaps =
-        m.start.row <= maxRow && m.end.row >= minRow &&
-        m.start.col <= maxCol && m.end.col >= minCol;
-      return !overlaps;
+  const legacyGridToMap = useCallback((grid: unknown): Record<string, Cell> => {
+    const map: Record<string, Cell> = {};
+    if (!Array.isArray(grid)) {
+      return map;
+    }
+
+    grid.forEach((row, rowIdx) => {
+      if (!Array.isArray(row) || rowIdx >= ROWS.length) return;
+      row.forEach((cell: any, colIdx: number) => {
+        if (colIdx >= COLS.length) return;
+        const cellId = `${columnIndexToLetters(colIdx)}${rowIdx + 1}`;
+        const value = typeof cell === 'object' && cell !== null ? (cell.value ?? '') : (cell ?? '');
+        const formula = typeof cell === 'object' && cell !== null ? cell.formula : undefined;
+        if (value || formula) {
+          map[cellId] = { id: cellId, value, formula };
+        }
+      });
+    });
+    return map;
+  }, [COLS.length, ROWS.length, columnIndexToLetters]);
+
+  const mapToLegacyGrid = useCallback((data: Record<string, Cell>) => {
+    const grid = Array.from({ length: ROWS.length }, () =>
+      Array.from({ length: COLS.length }, () => ({ value: '' }))
+    );
+
+    Object.entries(data).forEach(([cellId, cell]) => {
+      const parsed = parseCellId(cellId);
+      if (!parsed) return;
+      const { rowIndex, colIndex } = parsed;
+      if (rowIndex >= ROWS.length || colIndex >= COLS.length) return;
+      grid[rowIndex][colIndex] = {
+        value: cell.value || '',
+        formula: cell.formula
+      };
     });
 
-    setMerges([...nonOverlappingMerges, newMerge]);
+    return grid;
+  }, [COLS.length, ROWS.length, parseCellId]);
 
-    // Safety check: ensure sheetData is valid before processing
-    if (!Array.isArray(sheetData) || sheetData.length === 0) {
-      console.warn('Invalid sheetData in handleMergeCells, using empty sheet');
-      setSheetData(createEmptySheet());
-      return;
+  // --- SHEETS STATE ---
+  const [sheets, setSheets] = useState<Sheet[]>([
+    { id: 'sheet1', name: 'Sheet1', data: {} }
+  ]);
+  const [activeSheetId, setActiveSheetId] = useState('sheet1');
+  const [activeCell, setActiveCell] = useState<string | null>('A1');
+  const [formulaBarValue, setFormulaBarValue] = useState('');
+  
+  const [docState, setDocState] = useState<DocumentState>({
+    title: "Darevel Sheets",
+    lastSaved: new Date(),
+    activeSheetId: 'sheet1',
+    activeCell: 'A1',
+    selectionRange: null
+  });
+
+  const [savedSheets, setSavedSheets] = useState<SheetRecord[]>([]);
+  const [isLibraryLoading, setIsLibraryLoading] = useState(false);
+  const [isPersisting, setIsPersisting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [currentSheetRemoteId, setCurrentSheetRemoteId] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Theme State
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  // Ribbon State
+  const [activeRibbonTab, setActiveRibbonTab] = useState('Home');
+  const [showTemplates, setShowTemplates] = useState(false);
+
+  // Sidebar States
+  const [activeLeftPanel, setActiveLeftPanel] = useState<LeftPanelType>(LeftPanelType.FUNCTIONS);
+  const [activeRightPanel, setActiveRightPanel] = useState<RightPanelType>(RightPanelType.NONE);
+  
+  // Context Menu State
+  const [contextMenu, setContextMenu] = useState<{ show: boolean; x: number; y: number }>({ show: false, x: 0, y: 0 });
+  
+  const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
+  const getActiveSheet = () => sheets.find(s => s.id === activeSheetId) || sheets[0];
+
+  // Sync Formula Bar with Active Cell
+  useEffect(() => {
+    if (activeCell) {
+      const sheet = getActiveSheet();
+      const cellData = sheet.data[activeCell];
+      setFormulaBarValue(cellData?.value || '');
     }
+  }, [activeCell, activeSheetId, sheets]);
 
-    // Preserve top-left cell object, clear others
-    const cellToKeep = sheetData[minRow]?.[minCol] ?? { value: '' };
-    let newData = sheetData.map(r => [...r]);
-
-    // Ensure grid is large enough for merge
-    while (newData.length <= maxRow) {
-      newData.push(Array.from({ length: newData[0]?.length || INITIAL_COLS }, () => ({ value: '' })));
-    }
-
-    if (newData[0] && newData[0].length <= maxCol) {
-      const colsToAdd = maxCol - newData[0].length + 1;
-      newData = newData.map(r => [
-        ...r,
-        ...Array.from({ length: colsToAdd }, () => ({ value: '' }))
-      ]);
-    }
-
-    for (let r = minRow; r <= maxRow; r++) {
-      for (let c = minCol; c <= maxCol; c++) {
-        if (r === minRow && c === minCol) {
-          newData[r][c] = cellToKeep;
-        } else {
-          newData[r][c] = { value: '', format: cellToKeep.format }; // Inherit format from merged cell
-        }
-      }
-    }
-
-    setSheetData(newData);
-
-    // Reset selection to the new merged cell
-    setSelectionArea({ start: { row: minRow, col: minCol }, end: { row: maxRow, col: maxCol } });
-  }, [selectionArea, merges, sheetData]);
-
-  const handleUnmergeCells = useCallback(() => {
-    const mergeToUnmerge = findMergeForCell(selectionArea.start.row, selectionArea.start.col, merges);
-    if (mergeToUnmerge) {
-      setMerges(prevMerges => prevMerges.filter(m => m !== mergeToUnmerge));
-    }
-  }, [selectionArea, merges]);
-
-
-  const handleAIGenerate = async (prompt: string) => {
-    setIsAILoading(true);
-    setAiError(null);
-    try {
-      const contextData = sheetData.slice(0, 20).map(row => row.slice(0, 10));
-      const result = await generateData(prompt, contextData, selectionArea);
-
-      if (result && result.data && result.data.length > 0) {
-        const newData = sheetData.map(r => [...r]);
-        const { minRow, minCol } = getNormalizedSelection(selectionArea);
-
-        // Expand grid if needed for AI-generated data
-        const maxRow = minRow + result.data.length - 1;
-        const maxCol = minCol + Math.max(...result.data.map(row => row.length)) - 1;
-
-        // Add rows if necessary
-        while (newData.length <= maxRow) {
-          newData.push(Array.from({ length: newData[0]?.length || INITIAL_COLS }, () => ({ value: '' })));
-        }
-
-        // Add columns if necessary
-        if (newData[0] && newData[0].length <= maxCol) {
-          const colsToAdd = maxCol - newData[0].length + 1;
-          for (let i = 0; i < newData.length; i++) {
-            newData[i] = [
-              ...newData[i],
-              ...Array.from({ length: colsToAdd }, () => ({ value: '' }))
-            ];
+  const handleCellChange = (cellId: string, value: string) => {
+    setSheets(prev => prev.map(sheet => {
+      if (sheet.id === activeSheetId) {
+        return {
+          ...sheet,
+          data: {
+            ...sheet.data,
+            [cellId]: { ...sheet.data[cellId], id: cellId, value }
           }
-        }
-
-        // Insert AI-generated data
-        result.data.forEach((newRow, rowIndex) => {
-          newRow.forEach((cellValue, colIndex) => {
-            const targetRow = minRow + rowIndex;
-            const targetCol = minCol + colIndex;
-            if (targetRow < newData.length && targetCol < newData[0].length) {
-              const currentCell = newData[targetRow]?.[targetCol] || { value: '' };
-              newData[targetRow][targetCol] = { ...currentCell, value: cellValue };
-            }
-          });
-        });
-
-        setSheetData(newData);
-
-        // Show info about data source
-        if (result.source === 'fallback') {
-          console.info('Data generated using fallback patterns (Ollama not available)');
-        } else {
-          console.info('Data generated using Ollama');
-        }
-      } else {
-        setAiError("AI generated empty or invalid data. Please try a different prompt.");
+        };
       }
-    } catch (error) {
-      console.error("AI Generation Error:", error);
-      setAiError("Failed to generate data. Please check that Ollama is running or try a different prompt.");
+      return sheet;
+    }));
+    setFormulaBarValue(value);
+  };
+
+  const handleFormat = (command: string, value?: string) => {
+    if (command === 'newTemplate') { setShowTemplates(true); return; }
+    // Implement format logic for active cell...
+  };
+
+  const handleTemplateSelect = (template: string) => {
+    setShowTemplates(false);
+    setDocState(prev => ({...prev, title: template}));
+  };
+
+  const refreshSheetLibrary = useCallback(async () => {
+    try {
+      setIsLibraryLoading(true);
+      const list = await sheetApi.list();
+      setSavedSheets(list);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load sheets', err);
+      setError('Unable to load sheets from backend');
     } finally {
-      setIsAILoading(false);
+      setIsLibraryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshSheetLibrary();
+  }, [refreshSheetLibrary]);
+
+  useEffect(() => {
+    if (activeRibbonTab === 'File') {
+      refreshSheetLibrary();
+    }
+  }, [activeRibbonTab, refreshSheetLibrary]);
+
+  const handleCreateSheet = () => {
+    const id = `sheet-${Date.now()}`;
+    setSheets([{ id, name: 'Untitled Sheet', data: {} }]);
+    setActiveSheetId(id);
+    setActiveCell('A1');
+    setCurrentSheetRemoteId(null);
+    setDocState(prev => ({
+      ...prev,
+      title: 'Untitled Sheet',
+      activeSheetId: id,
+      activeCell: 'A1',
+      lastSaved: new Date()
+    }));
+    setActiveRibbonTab('Home');
+  };
+
+  const handleOpenSheet = async (recordId: number) => {
+    try {
+      setIsPersisting(true);
+      const record = await sheetApi.get(recordId);
+      const parsed = JSON.parse(record.data || '[]');
+      const map = legacyGridToMap(parsed);
+      const newId = `sheet-${record.id}`;
+      setSheets([{ id: newId, name: record.name, data: map, remoteId: record.id }]);
+      setActiveSheetId(newId);
+      setActiveCell('A1');
+      setCurrentSheetRemoteId(record.id);
+      setDocState(prev => ({
+        ...prev,
+        title: record.name,
+        activeSheetId: newId,
+        activeCell: 'A1',
+        lastSaved: record.lastSavedAt ? new Date(record.lastSavedAt) : new Date()
+      }));
+      setActiveRibbonTab('Home');
+      setError(null);
+    } catch (err) {
+      console.error('Failed to open sheet', err);
+      setError('Failed to open sheet');
+    } finally {
+      setIsPersisting(false);
     }
   };
 
-  const primarySelectedCell = useMemo(() => {
-    const { start } = selectionArea;
-    const merge = findMergeForCell(start.row, start.col, merges);
-    const cellCoords = merge ? merge.start : start;
-    return sheetData[cellCoords.row]?.[cellCoords.col];
-  }, [selectionArea, sheetData, merges]);
-
-  const selectionCount = useMemo(() => {
-    const { minRow, maxRow, minCol, maxCol } = getNormalizedSelection(selectionArea);
-    let count = 0;
-    const countedMergeStarts = new Set<string>();
-
-    // This logic accurately counts visible cells in the selection, accounting for merges.
-    for (let r = minRow; r <= maxRow; r++) {
-      for (let c = minCol; c <= maxCol; c++) {
-        const merge = findMergeForCell(r, c, merges);
-        if (merge) {
-          const key = `${merge.start.row}-${merge.start.col}`;
-          if (!countedMergeStarts.has(key)) {
-            count++;
-            countedMergeStarts.add(key);
-          }
-        } else {
-          count++;
-        }
-      }
+  const handleDeleteSheet = async (recordId: number) => {
+    if (!window.confirm('Delete this sheet permanently?')) {
+      return;
     }
-    return count;
-  }, [selectionArea, merges]);
-
-  const selectionCountText = useMemo(() => {
-    if (selectionCount > 1) {
-      return `${selectionCount} selected`;
-    }
-    return null;
-  }, [selectionCount]);
-
-  // Auto-save to localStorage whenever sheetData or merges change
-  useEffect(() => {
     try {
-      localStorage.setItem('darevel-spreadsheet-data', JSON.stringify(sheetData));
-      localStorage.setItem('darevel-spreadsheet-merges', JSON.stringify(merges));
-    } catch (error) {
-      console.error('Failed to save to localStorage:', error);
+      await sheetApi.remove(recordId);
+      if (currentSheetRemoteId === recordId) {
+        handleCreateSheet();
+      }
+      await refreshSheetLibrary();
+    } catch (err) {
+      console.error('Failed to delete sheet', err);
+      setError('Failed to delete sheet');
     }
-  }, [sheetData, merges]);
+  };
 
-  // Keyboard shortcuts for undo/redo
+  const handleSaveSheet = async () => {
+    const activeSheet = getActiveSheet();
+    if (!activeSheet) return;
+
+    const payloadName = docState.title || activeSheet.name;
+    const serializedData = JSON.stringify(mapToLegacyGrid(activeSheet.data));
+
+    try {
+      setIsPersisting(true);
+      const payload = { name: payloadName, data: serializedData, merges: JSON.stringify([]) };
+      let record: SheetRecord;
+      if (currentSheetRemoteId) {
+        record = await sheetApi.update(currentSheetRemoteId, payload);
+      } else {
+        record = await sheetApi.create(payload);
+      }
+
+      setCurrentSheetRemoteId(record.id);
+      setSheets(prev => prev.map(sheet => sheet.id === activeSheetId ? { ...sheet, name: record.name, remoteId: record.id } : sheet));
+      setDocState(prev => ({
+        ...prev,
+        title: record.name,
+        lastSaved: record.lastSavedAt ? new Date(record.lastSavedAt) : new Date()
+      }));
+      setStatusMessage('All changes saved');
+      await refreshSheetLibrary();
+      setError(null);
+    } catch (err) {
+      console.error('Failed to save sheet', err);
+      setError('Failed to save sheet');
+    } finally {
+      setIsPersisting(false);
+      setTimeout(() => setStatusMessage(null), 4000);
+    }
+  };
+
+  // Keyboard Navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        if (canUndo) undo();
-      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
-        e.preventDefault();
-        if (canRedo) redo();
-      }
+      // Basic implementation for movement could go here
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canUndo, canRedo, undo, redo]);
-
-  // Auto-save version periodically
-  useEffect(() => {
-    const interval = setInterval(() => {
-      versionHistory.autoSave(sheetData, merges);
-    }, 5 * 60 * 1000); // Every 5 minutes
-
-    return () => clearInterval(interval);
-  }, [sheetData, merges]);
-
-  // Auto-sync with backend every 30 seconds
-  useEffect(() => {
-    const syncToBackend = async () => {
-      if (!user || isSyncing) return;
-
-      try {
-        setIsSyncing(true);
-        if (currentSheetId) {
-          // Update existing sheet
-          await apiService.updateSheet(currentSheetId, sheetName, sheetData, merges);
-        } else {
-          // Create new sheet
-          const response = await apiService.saveSheet(sheetName, sheetData, merges);
-          setCurrentSheetId(response.id);
-        }
-        setLastSyncTime(new Date());
-      } catch (error) {
-        console.error('Auto-sync failed:', error);
-      } finally {
-        setIsSyncing(false);
-      }
-    };
-
-    const interval = setInterval(() => {
-      syncToBackend();
-    }, 30 * 1000); // Every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [sheetData, merges, currentSheetId, sheetName, user, isSyncing]);
-
-  // Version history handlers
-  const handleSaveVersion = useCallback(() => {
-    const description = prompt('Enter a description for this version (optional):');
-    versionHistory.createVersion(sheetData, merges, description || undefined, false);
-    alert('Version saved successfully!');
-  }, [sheetData, merges]);
-
-  const handleRestoreVersion = useCallback((version: any) => {
-    setSheetData(version.data);
-    setMerges(version.merges);
   }, []);
 
-  const handleDeleteVersion = useCallback((id: string) => {
-    versionHistory.deleteVersion(id);
-  }, []);
-
-  const handleClearAllVersions = useCallback(() => {
-    versionHistory.clearAll();
-  }, []);
-
-  const handleImport = useCallback((data: SheetData, importedMerges: Merge[]) => {
-    setSheetData(data);
-    setMerges(importedMerges);
-  }, []);
-
-  const handleLoadFromCloud = useCallback((id: number, name: string, data: SheetData, importedMerges: Merge[]) => {
-    setCurrentSheetId(id);
-    setSheetName(name);
-    setSheetData(data);
-    setMerges(importedMerges);
-  }, []);
-
-  return (
-    <div className="flex flex-col h-screen font-sans text-gray-800">
-      {/* Sticky Header */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-2 flex items-center justify-between shadow-sm">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-xl font-semibold text-gray-700 dark:text-gray-200">AI Spreadsheet</h1>
-          <FileMenu
-            sheetData={sheetData}
-            merges={merges}
-            onImport={handleImport}
-            onSaveVersion={handleSaveVersion}
-            onShowVersionHistory={() => setShowVersionHistory(true)}
-            onShowLoadFromCloud={() => setShowLoadSheet(true)}
-          />
-        </div>
-        <div className="flex items-center space-x-4">
-          {/* Sync Status */}
-          {isSyncing && (
-            <span className="text-sm text-blue-600 dark:text-blue-400">Syncing...</span>
-          )}
-          {lastSyncTime && !isSyncing && (
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              Last saved: {lastSyncTime.toLocaleTimeString()}
-            </span>
-          )}
-
-          {/* User Info */}
-          {user && (
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600 dark:text-gray-400">{user.username}</span>
-              <button
-                onClick={logout}
-                className="px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors"
-              >
-                Logout
-              </button>
-            </div>
-          )}
-          {/* Zoom Control */}
-          <div className="flex items-center space-x-2">
-            <label className="text-sm text-gray-600" htmlFor="zoom-slider">
-              Zoom:
-            </label>
-            <input
-              id="zoom-slider"
-              type="range"
-              min="50"
-              max="200"
-              step="10"
-              value={zoom}
-              onChange={(e) => setZoom(Number(e.target.value))}
-              className="w-24"
-            />
-            <span className="text-sm text-gray-600 w-12">{zoom}%</span>
-          </div>
-
-          {/* Theme Toggle */}
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-md hover:bg-gray-200 transition-colors"
-            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-          >
-            {theme === 'light' ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            )}
-          </button>
-        </div>
-      </header>
-
-      {/* Sticky Toolbar */}
-      <div className="sticky top-[49px] z-30 shadow-md">
-        <Toolbar
-          selectionArea={selectionArea}
-          merges={merges}
-          onMerge={handleMergeCells}
-          onUnmerge={handleUnmergeCells}
-          onApplyFormat={applyFormatToSelection}
-          primaryCellFormat={primarySelectedCell?.format}
-          onUndo={undo}
-          onRedo={redo}
-          canUndo={canUndo}
-          canRedo={canRedo}
+  if (activeRibbonTab === 'File') {
+    return (
+      <div className={isDarkMode ? 'dark' : ''}>
+        {showTemplates && <TemplateGallery onClose={() => setShowTemplates(false)} onSelect={handleTemplateSelect} />}
+        <FileDashboard 
+          onBack={() => setActiveRibbonTab('Home')} 
+          onOpenTemplates={() => setShowTemplates(true)}
+          sheets={savedSheets}
+          isLoading={isLibraryLoading}
+          onOpenSheet={handleOpenSheet}
+          onCreateSheet={handleCreateSheet}
+          onDeleteSheet={handleDeleteSheet}
+          onRefresh={refreshSheetLibrary}
         />
       </div>
+    );
+  }
 
-      {/* Formula Bar */}
-      <FormulaBar
-        selectionArea={selectionArea}
-        value={primarySelectedCell?.value ?? ''}
-        onValueChange={(value) => updateCell(selectionArea.start.row, selectionArea.start.col, value)}
-        selectionCountText={selectionCountText}
-      />
-
-      {/* Main Content */}
-      <main className="flex-grow flex overflow-hidden">
-        <div className="flex-grow overflow-auto">
-          <Spreadsheet
-            sheetData={sheetData}
-            selectionArea={selectionArea}
-            setSelectionArea={setSelectionArea}
-            updateCell={updateCell}
-            merges={merges}
-            zoom={zoom}
-          />
+  return (
+    <div className={isDarkMode ? 'dark' : ''}>
+      {error && (
+        <div className="fixed top-4 right-4 z-50 bg-red-500/10 border border-red-400 text-red-600 px-4 py-2 rounded-xl flex items-center gap-4 shadow-lg">
+          <span>{error}</span>
+          <button className="text-sm underline" onClick={() => setError(null)}>Dismiss</button>
         </div>
-        <AIPanel
-          onGenerate={handleAIGenerate}
-          isLoading={isAILoading}
-          error={aiError}
-        />
-      </main>
+      )}
+      <div className="flex h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-800 dark:text-slate-300 overflow-hidden font-sans transition-colors duration-200">
+        
+        {showTemplates && <TemplateGallery onClose={() => setShowTemplates(false)} onSelect={handleTemplateSelect} />}
+        
+        {contextMenu.show && (
+          <ContextMenu 
+            x={contextMenu.x} 
+            y={contextMenu.y} 
+            onClose={() => setContextMenu({...contextMenu, show: false})} 
+            onFormat={(cmd, val) => { handleFormat(cmd, val); setContextMenu({...contextMenu, show: false}); }} 
+          />
+        )}
 
-      {/* Version History Modal */}
-      <VersionHistoryModal
-        isOpen={showVersionHistory}
-        onClose={() => setShowVersionHistory(false)}
-        versions={versionHistory.getVersions()}
-        onRestore={handleRestoreVersion}
-        onDelete={handleDeleteVersion}
-        onClearAll={handleClearAllVersions}
-      />
+        {/* 1. LEFT NAVIGATION STRIP */}
+        <div className="w-[68px] bg-slate-50 dark:bg-[#0f172a] flex flex-col items-center py-6 z-50 flex-shrink-0 h-full border-r border-slate-200 dark:border-slate-800 transition-colors duration-200">
+          <div className="mb-8"><button className="flex items-center justify-center"><DarevelLogo /></button></div>
+          <div className="flex flex-col items-center flex-1 w-full overflow-y-auto gap-4 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+             <SidebarIcon icon={FileSpreadsheet} type={LeftPanelType.FUNCTIONS} activeType={activeLeftPanel} onClick={setActiveLeftPanel} />
+             <SidebarIcon icon={PlusSquare} type={LeftPanelType.INSERT} activeType={activeLeftPanel} onClick={setActiveLeftPanel} />
+             <SidebarIcon icon={Search} type={LeftPanelType.SEARCH} activeType={activeLeftPanel} onClick={setActiveLeftPanel} />
+             <SidebarIcon icon={Sparkles} type={LeftPanelType.AI} activeType={activeLeftPanel} onClick={setActiveLeftPanel} />
+             <SidebarIcon icon={Database} type={LeftPanelType.DATA} activeType={activeLeftPanel} onClick={setActiveLeftPanel} />
+             <SidebarIcon icon={LayoutGrid} type={LeftPanelType.SNIPPETS} activeType={activeLeftPanel} onClick={setActiveLeftPanel} />
+          </div>
+          <div className="mt-auto flex flex-col items-center gap-6 pb-4">
+              <button onClick={toggleTheme} className="p-3 text-slate-500 dark:text-slate-400 hover:text-white rounded-2xl hover:bg-slate-800 transition-all">
+                 {isDarkMode ? <Moon size={20} /> : <Sun size={20} />}
+              </button>
+          </div>
+        </div>
 
-      {/* Load Sheet Modal */}
-      <LoadSheetModal
-        isOpen={showLoadSheet}
-        onClose={() => setShowLoadSheet(false)}
-        onLoad={handleLoadFromCloud}
-      />
+        {/* 2. EXPANDABLE LEFT PANEL */}
+        {activeLeftPanel !== LeftPanelType.NONE && (
+          <div className="w-80 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a] flex flex-col shadow-2xl relative z-40">
+            {activeLeftPanel === LeftPanelType.AI ? (
+              <AIAssistant 
+                documentContext={""}
+                selectedText={activeCell ? getActiveSheet().data[activeCell]?.value : ""}
+                onInsert={(text) => handleFormat('insertText', text)}
+              />
+            ) : (
+              <LeftSidebarPanel type={activeLeftPanel} onClose={() => setActiveLeftPanel(LeftPanelType.NONE)} />
+            )}
+          </div>
+        )}
+
+        {/* 3. MAIN WORKSPACE */}
+        <div className="flex-1 flex flex-col min-w-0 bg-[#e5e5e5] dark:bg-[#18181b] relative transition-colors duration-200">
+          
+          {/* Header */}
+          <header className="h-14 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 bg-white dark:bg-[#0f172a] z-30">
+            <div className="flex items-center gap-4">
+               <h1 className="text-lg font-normal text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                 <FileSpreadsheet className="text-green-500" size={20} />
+                 <span className="font-semibold text-black dark:text-white">{docState.title}</span>
+               </h1>
+               <div className="text-xs text-slate-500 dark:text-slate-400">
+                 {statusMessage || `Last saved ${docState.lastSaved?.toLocaleString()}`}
+               </div>
+            </div>
+            <div className="flex items-center gap-2">
+               <button
+                 onClick={handleSaveSheet}
+                 className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow-lg disabled:opacity-60"
+                 disabled={isPersisting}
+               >
+                  {isPersisting ? 'Saving…' : 'Save'}
+               </button>
+               <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow-lg">
+                  <Share2 size={16} /> Share
+               </button>
+
+               {/* User Profile Dropdown */}
+               <div className="relative ml-2">
+                 <button
+                   onClick={() => setShowProfileMenu(!showProfileMenu)}
+                   className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-sm font-bold text-white hover:ring-2 hover:ring-green-300 transition-all"
+                 >
+                   {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+                 </button>
+
+                 {showProfileMenu && (
+                   <>
+                     <div
+                       className="fixed inset-0 z-40"
+                       onClick={() => setShowProfileMenu(false)}
+                     />
+                     <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-800 rounded-lg shadow-2xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
+                       <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-slate-900 dark:to-slate-800">
+                         <div className="flex items-center gap-3">
+                           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-xl font-bold text-white">
+                             {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+                           </div>
+                           <div className="flex-1 min-w-0">
+                             <div className="font-semibold text-slate-900 dark:text-white truncate">
+                               {user?.name || user?.username || 'User'}
+                             </div>
+                             <div className="text-sm text-slate-600 dark:text-slate-400 truncate">
+                               {user?.email || 'No email'}
+                             </div>
+                           </div>
+                         </div>
+                       </div>
+                       <div className="p-2">
+                         <button
+                           onClick={logout}
+                           className="w-full flex items-center gap-3 px-3 py-2 text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors"
+                         >
+                           <LogOut size={18} />
+                           <span className="font-medium">Sign out</span>
+                         </button>
+                       </div>
+                     </div>
+                   </>
+                 )}
+               </div>
+            </div>
+          </header>
+
+          {/* Ribbon */}
+          <div className="flex flex-col border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a] z-20">
+             <div className="flex items-center justify-between px-2 pt-2 border-b border-slate-200 dark:border-slate-800">
+               <div className="flex-1"><MenuBar activeTab={activeRibbonTab} onTabChange={setActiveRibbonTab} /></div>
+             </div>
+             <Ribbon activeTab={activeRibbonTab} onFormat={handleFormat} isDarkMode={isDarkMode} onToggleTheme={toggleTheme} />
+          </div>
+
+          {/* FORMULA BAR (Enhanced UI) */}
+          <div className="h-12 bg-white dark:bg-[#0b1320] border-b border-slate-200 dark:border-slate-800 flex items-center px-4 gap-3 z-20 text-sm shadow-sm relative">
+             <div className="w-24 h-8 bg-slate-100 dark:bg-[#1e293b] border border-slate-300 dark:border-slate-700 rounded-md px-3 flex items-center justify-center font-bold font-mono text-slate-600 dark:text-slate-300 shadow-inner">
+                {activeCell || ''}
+             </div>
+             <div className="flex items-center gap-1">
+                <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-red-500"><Plus size={14} className="rotate-45" /></button>
+                <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-green-500"><Check size={14} /></button>
+                <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-blue-500"><FunctionSquare size={14} /></button>
+             </div>
+             <div className="flex-1 h-8 bg-slate-50 dark:bg-[#151e32] border border-slate-200 dark:border-slate-700/50 rounded-md flex items-center relative group focus-within:ring-2 focus-within:ring-blue-500/30 transition-all">
+                <div className="px-3 text-slate-400 dark:text-slate-500 font-serif italic font-bold">fx</div>
+                <input 
+                  value={formulaBarValue}
+                  onChange={(e) => {
+                     setFormulaBarValue(e.target.value);
+                     if(activeCell) handleCellChange(activeCell, e.target.value);
+                  }}
+                  className="flex-1 bg-transparent outline-none text-slate-800 dark:text-slate-200 px-1 font-mono text-sm h-full w-full"
+                  placeholder="Enter formula or value"
+                />
+             </div>
+             <button className="text-slate-400 hover:text-white transition-colors"><ChevronDown size={14} /></button>
+          </div>
+
+          {/* SPREADSHEET GRID */}
+          <div className="flex-1 overflow-auto bg-slate-50 dark:bg-[#18181b] relative custom-scrollbar">
+             <table className="border-collapse w-max">
+                <thead>
+                   <tr>
+                      <th className="w-10 bg-slate-100 dark:bg-[#0f172a] border-r border-b border-slate-300 dark:border-slate-700 sticky top-0 left-0 z-20">
+                         <div className="absolute bottom-0 right-0 w-3 h-3 border-t border-l border-slate-400/30"></div>
+                      </th>
+                      {COLS.map(col => (
+                         <th key={col} className="w-24 h-8 bg-slate-100 dark:bg-[#0f172a] border-r border-b border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-500 dark:text-slate-400 sticky top-0 z-10 select-none hover:bg-slate-200 dark:hover:bg-[#1e293b] transition-colors cursor-pointer">
+                            {col}
+                         </th>
+                      ))}
+                   </tr>
+                </thead>
+                <tbody>
+                   {ROWS.map(row => (
+                      <tr key={row}>
+                         <td className="h-6 bg-slate-100 dark:bg-[#0f172a] border-r border-b border-slate-300 dark:border-slate-700 text-xs text-center text-slate-500 dark:text-slate-400 sticky left-0 z-10 select-none hover:bg-slate-200 dark:hover:bg-[#1e293b] transition-colors cursor-pointer">
+                            {row}
+                         </td>
+                         {COLS.map(col => {
+                            const cellId = `${col}${row}`;
+                            const isActive = activeCell === cellId;
+                            const cellData = getActiveSheet().data[cellId];
+                            return (
+                               <td 
+                                 key={cellId}
+                                 onClick={() => setActiveCell(cellId)}
+                                 className={`
+                                   border-r border-b border-slate-300 dark:border-slate-700 p-0 relative min-w-[96px] h-6
+                                   ${isActive ? 'z-10' : ''}
+                                 `}
+                               >
+                                  {isActive && (
+                                     <div className="absolute inset-0 border-2 border-green-500 pointer-events-none shadow-[0_0_0_1px_rgba(22,163,74,0.3)]">
+                                        <div className="absolute -bottom-1.5 -right-1.5 w-2.5 h-2.5 bg-green-500 border border-white dark:border-[#18181b] cursor-crosshair"></div>
+                                     </div>
+                                  )}
+                                  <input 
+                                    className="w-full h-full bg-transparent px-1 text-xs text-slate-800 dark:text-slate-300 outline-none cursor-cell focus:cursor-text"
+                                    value={cellData?.value || ''}
+                                    onChange={(e) => handleCellChange(cellId, e.target.value)}
+                                  />
+                               </td>
+                            );
+                         })}
+                      </tr>
+                   ))}
+                </tbody>
+             </table>
+          </div>
+
+          {/* SHEET TABS (Footer) - Enhanced */}
+          <footer className="h-10 bg-slate-100 dark:bg-[#0b1320] border-t border-slate-300 dark:border-slate-800 flex items-center px-2 z-30 shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
+             <div className="flex items-center gap-2 h-full mr-4 border-r border-slate-300 dark:border-slate-700 pr-2">
+               <button className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"><Plus size={18} /></button>
+               <button className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"><Menu size={18} /></button>
+             </div>
+             <div className="flex items-end h-full overflow-x-auto gap-1">
+                {sheets.map(sheet => (
+                   <button 
+                     key={sheet.id}
+                     onClick={() => setActiveSheetId(sheet.id)}
+                     className={`
+                       px-6 py-1.5 text-xs font-semibold rounded-t-lg min-w-[120px] text-center transition-all relative top-[1px]
+                       ${activeSheetId === sheet.id 
+                         ? 'bg-slate-50 dark:bg-[#18181b] text-green-600 dark:text-green-400 border-t-2 border-x border-slate-300 dark:border-slate-700 border-t-green-500 shadow-sm' 
+                         : 'bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
+                       }
+                     `}
+                   >
+                      {sheet.name}
+                   </button>
+                ))}
+                <button className="px-3 text-slate-400 hover:text-green-500 transition-colors"><Plus size={14} /></button>
+             </div>
+             <div className="ml-auto flex items-center gap-4 text-xs font-medium text-slate-500 dark:text-slate-400 px-4">
+                <span>Ready</span>
+                <span>Num Lock</span>
+                <div className="w-32 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                   <div className="w-2/3 h-full bg-blue-500 rounded-full"></div>
+                </div>
+                <span>100%</span>
+             </div>
+          </footer>
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SidebarIcon = ({ icon: Icon, type, activeType, onClick }: any) => {
+  const isActive = activeType === type;
+  return (
+    <div className="w-full flex items-center justify-center">
+      <button 
+        onClick={() => onClick(isActive ? LeftPanelType.NONE : type)}
+        className={`p-3 rounded-xl transition-all ${isActive ? 'bg-white text-green-600 shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+      >
+        <Icon size={20} />
+      </button>
     </div>
   );
 };

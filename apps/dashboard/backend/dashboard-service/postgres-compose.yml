@@ -1,0 +1,28 @@
+services:
+  postgres-dashboard:
+    image: postgres:15-alpine
+    container_name: darevel-postgres-dashboard
+    environment:
+      POSTGRES_USER: ${DASHBOARD_DB_USER:-dashboard}
+      POSTGRES_PASSWORD: ${DASHBOARD_DB_PASSWORD:-dashboard}
+      POSTGRES_DB: ${DASHBOARD_DB_NAME:-dashboard}
+    ports:
+      - "5443:5432"
+    volumes:
+      - darevel-postgres-dashboard-data:/var/lib/postgresql/data
+    networks:
+      - darevel-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DASHBOARD_DB_USER:-dashboard}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  darevel-postgres-dashboard-data:
+    driver: local
+
+networks:
+  darevel-network:
+    driver: bridge

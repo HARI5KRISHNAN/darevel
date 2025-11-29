@@ -20,33 +20,6 @@ services:
     networks:
       - darevel-network
 
-  # Chat Backend Service
-  chat-backend:
-    build:
-      context: .
-      dockerfile: ./apps/chat/backend/Dockerfile
-    container_name: darevel-backend-chat
-    ports:
-      - "8081:8081"
-    environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=darevel_chat
-      - SERVER_PORT=8081
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - darevel-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/api/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
   # Mail Backend Service
   mail-backend:
     build:
@@ -137,10 +110,62 @@ services:
     networks:
       - darevel-network
 
+  # Notification Backend Stack
+  notification-db:
+    image: postgres:15
+    container_name: darevel-postgres-notification
+    environment:
+      POSTGRES_DB: notification
+      POSTGRES_USER: notification
+      POSTGRES_PASSWORD: notification
+    ports:
+      - "5445:5432"
+    volumes:
+      - darevel-postgres-notification:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notification"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - darevel-network
+
+  notification-redis:
+    image: redis:7-alpine
+    container_name: darevel-notification-redis
+    ports:
+      - "6385:6379"
+    networks:
+      - darevel-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: ./apps/notification/backend/notification-service/Dockerfile
+    container_name: darevel-notification-service
+    ports:
+      - "9495:9495"
+    environment:
+      - DB_URL=jdbc:postgresql://notification-db:5432/notification
+      - DB_USERNAME=notification
+      - DB_PASSWORD=notification
+      - REDIS_HOST=notification-redis
+      - REDIS_PORT=6379
+      - JWT_ISSUER_URI=http://host.docker.internal:8180/realms/darevel
+    depends_on:
+      notification-db:
+        condition: service_healthy
+      notification-redis:
+        condition: service_started
+    networks:
+      - darevel-network
+
 networks:
   darevel-network:
     driver: bridge
 
 volumes:
   darevel-postgres-shared:
+    driver: local
+  darevel-postgres-notification:
     driver: local

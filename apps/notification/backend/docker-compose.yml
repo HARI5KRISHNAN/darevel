@@ -1,0 +1,46 @@
+version: "3.9"
+services:
+  notification-db:
+    image: postgres:15
+    container_name: darevel-notification-db
+    environment:
+      POSTGRES_DB: notification
+      POSTGRES_USER: notification
+      POSTGRES_PASSWORD: notification
+    ports:
+      - "5445:5432"
+    volumes:
+      - notification-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notification"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  notification-redis:
+    image: redis:7-alpine
+    container_name: darevel-notification-redis
+    ports:
+      - "6385:6379"
+
+  notification-service:
+    build:
+      context: ../../..
+      dockerfile: apps/notification/backend/notification-service/Dockerfile
+    environment:
+      DB_URL: jdbc:postgresql://notification-db:5432/notification
+      DB_USERNAME: notification
+      DB_PASSWORD: notification
+      REDIS_HOST: notification-redis
+      REDIS_PORT: 6379
+      JWT_ISSUER_URI: http://host.docker.internal:8180/realms/darevel
+    ports:
+      - "9495:9495"
+    depends_on:
+      notification-db:
+        condition: service_healthy
+      notification-redis:
+        condition: service_started
+
+volumes:
+  notification-db-data:

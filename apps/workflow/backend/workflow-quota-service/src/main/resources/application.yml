@@ -1,0 +1,22 @@
+server:
+  port: ${WORKFLOW_QUOTA_PORT:9408}
+
+spring:
+  application:
+    name: workflow-quota-service
+  datasource:
+    url: ${WORKFLOW_QUOTA_DB_URL:jdbc:postgresql://localhost:5442/workflow_quota}
+    username: ${WORKFLOW_QUOTA_DB_USER:workflow}
+    password: ${WORKFLOW_QUOTA_DB_PASSWORD:workflow}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,prometheus"

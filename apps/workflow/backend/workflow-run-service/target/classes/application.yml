@@ -1,0 +1,29 @@
+server:
+  port: ${WORKFLOW_RUN_PORT:9405}
+
+spring:
+  application:
+    name: workflow-run-service
+  datasource:
+    url: ${WORKFLOW_RUN_DB_URL:jdbc:postgresql://localhost:5442/workflow_runs}
+    username: ${WORKFLOW_RUN_DB_USER:workflow}
+    password: ${WORKFLOW_RUN_DB_PASSWORD:workflow}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  kafka:
+    bootstrap-servers: ${WORKFLOW_KAFKA_BOOTSTRAP:localhost:9092}
+    consumer:
+      group-id: workflow-run-service
+      properties:
+        spring.json.trusted.packages: com.darevel.workflow.*
+        spring.json.value.default.type: com.darevel.workflow.shared.dto.WorkflowRunDto
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,prometheus"

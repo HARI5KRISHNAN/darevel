@@ -1,5 +1,5 @@
 {
-  "name": "AI Spreadsheet",
-  "description": "An intelligent spreadsheet application integrated with Gemini AI to help you generate, format, and analyze data with natural language commands.",
+  "name": "Darevel Sheets",
+  "description": "A modern Darevel Sheets experience with AI assistance and backend connectivity for enterprise spreadsheets.",
   "requestFramePermissions": []
 }

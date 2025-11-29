@@ -1,27 +1,26 @@
 {
-  "name": "mailbox-ui-clone",
-  "private": true,
-  "version": "0.0.0",
+  "name": "@darevel/mail",
+  "version": "1.0.0",
+  "description": "Darevel Mail Application - Professional email client with modern UI",
   "type": "module",
   "scripts": {
     "dev": "vite --port 3008",
-    "build": "vite build",
-    "preview": "vite preview --port 3008"
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint ."
   },
   "dependencies": {
-    "@darevel/shared": "file:../shared",
-    "keycloak-js": "^22.0.5",
-    "@google/genai": "^1.28.0",
+    "@google/generative-ai": "^0.21.0",
     "axios": "^1.13.1",
-    "cron": "^4.3.3",
-    "imap-simple": "^5.1.0",
+    "keycloak-js": "^22.0.5",
+    "lucide-react": "^0.555.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-basic-ssl": "^2.1.0",
-    "@vitejs/plugin-react": "^5.0.0",
+    "@types/react": "^19.0.9",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

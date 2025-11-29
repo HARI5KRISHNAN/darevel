@@ -1,0 +1,15 @@
+[
+  { "code": "docs.read", "name": "Read Documents", "description": "View documents", "module": "docs" },
+  { "code": "docs.write", "name": "Edit Documents", "description": "Create and edit documents", "module": "docs" },
+  { "code": "docs.comment", "name": "Comment on Documents", "description": "Add comments to documents", "module": "docs" },
+  { "code": "docs.share", "name": "Share Documents", "description": "Share documents externally", "module": "docs" },
+  { "code": "wiki.read", "name": "Read Wiki", "description": "View wiki pages", "module": "wiki" },
+  { "code": "wiki.write", "name": "Edit Wiki", "description": "Create and edit wiki pages", "module": "wiki" },
+  { "code": "wiki.manage", "name": "Manage Wiki Structure", "description": "Manage wiki hierarchy", "module": "wiki" },
+  { "code": "storage.read", "name": "View Files", "description": "View files in storage", "module": "storage" },
+  { "code": "storage.upload", "name": "Upload Files", "description": "Upload new files", "module": "storage" },
+  { "code": "storage.delete", "name": "Delete Files", "description": "Remove files", "module": "storage" },
+  { "code": "admin.users", "name": "Manage Users", "description": "Add or remove users", "module": "admin" },
+  { "code": "admin.roles", "name": "Manage Roles", "description": "Create and edit roles", "module": "admin" },
+  { "code": "admin.billing", "name": "Billing", "description": "Access billing information", "module": "admin" }
+]

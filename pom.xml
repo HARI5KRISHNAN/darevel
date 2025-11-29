@@ -13,11 +13,22 @@
     <description>Enterprise OSS Platform: Dashboard, Chat, Sheets, Slides, Mail with SSO</description>
 
     <modules>
-        <module>apps/chat/backend</module>
+        <!-- Chat Java microservices -->
+        <module>apps/chat/backend-java</module>
+        <!-- Core document/spreadsheet/presentation backends -->
         <module>apps/sheet/backend</module>
-        <module>apps/mail/backend</module>
+        <!-- Mail backend (Spring Boot service) -->
+        <module>apps/mail/backend/mail-service</module>
         <module>apps/slides/backend</module>
         <module>apps/suite/backend</module>
+        <!-- Workflow, Dashboard, Notification, Billing, Audit backends -->
+        <module>apps/workflow/backend</module>
+        <module>apps/dashboard/backend/dashboard-service</module>
+        <module>apps/notification/backend/notification-service</module>
+        <module>apps/billing/backend/billing-service</module>
+        <module>apps/audit/backend/audit-service</module>
+        <module>apps/admin/backend/admin-service</module>
+        <module>apps/preview/backend/preview-service</module>
     </modules>
 
     <properties>

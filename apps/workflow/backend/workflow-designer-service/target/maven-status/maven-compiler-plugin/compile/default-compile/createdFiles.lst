@@ -1,0 +1,3 @@
+com\darevel\workflow\designer\repository\WorkflowDefinitionRepository.class
+com\darevel\workflow\designer\entity\WorkflowDefinitionEntity.class
+com\darevel\workflow\designer\WorkflowDesignerServiceApplication.class

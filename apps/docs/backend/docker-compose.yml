@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  docs-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: darevel-docs-service
+    ports:
+      - "8087:8087"
+    environment:
+      SERVER_PORT: ${SERVER_PORT:-8087}
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-5439}
+      DB_NAME: ${DB_NAME:-darevel_docs}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:-http://host.docker.internal:8180/realms/darevel}
+      KEYCLOAK_JWK_URI: ${KEYCLOAK_JWK_URI:-http://host.docker.internal:8180/realms/darevel/protocol/openid-connect/certs}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:3009}
+      WS_ORIGINS: ${WS_ORIGINS:-http://localhost:3000,http://localhost:3009}
+      MAX_COLLABORATORS: ${MAX_COLLABORATORS:-50}
+      SNAPSHOT_INTERVAL: ${SNAPSHOT_INTERVAL:-300}
+      AUTO_SAVE_INTERVAL: ${AUTO_SAVE_INTERVAL:-30}
+      S3_ENABLED: ${S3_ENABLED:-false}
+    networks:
+      - darevel-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8087/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  darevel-network:
+    driver: bridge

@@ -12,6 +12,7 @@ import {
   Mail,
   FileSpreadsheet,
   Presentation,
+  FileText,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,6 +68,14 @@ export default function DashboardPage() {
       icon: Presentation,
       color: "from-purple-500 to-pink-500",
       description: "Presentations",
+    },
+    {
+      name: "Forms",
+      port: 3005,
+      status: "checking",
+      icon: FileText,
+      color: "from-yellow-500 to-orange-500",
+      description: "Form builder & surveys",
     },
   ]);
 

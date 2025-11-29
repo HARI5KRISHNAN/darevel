@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres-drive:
+    image: postgres:15-alpine
+    container_name: darevel-postgres-drive
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: darevel_drive
+    ports:
+      - "5448:5432"
+    volumes:
+      - postgres-drive-data:/var/lib/postgresql/data
+    networks:
+      - darevel-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: darevel-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9500:9000"  # API port
+      - "9501:9001"  # Console port
+    volumes:
+      - minio-data:/data
+    networks:
+      - darevel-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    restart: unless-stopped
+
+  # Kafka (optional, for events)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: darevel-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: darevel-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  # Drive Meta Service
+  drive-meta-service:
+    build:
+      context: ./drive-meta-service
+      dockerfile: Dockerfile
+    container_name: darevel-drive-meta-service
+    depends_on:
+      postgres-drive:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      DRIVE_META_DB_URL: jdbc:postgresql://postgres-drive:5432/darevel_drive
+      DRIVE_META_DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DRIVE_META_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET_NAME: darevel-drive
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      OAUTH_ISSUER_URI: ${OAUTH_ISSUER_URI:-http://localhost:8180/realms/darevel}
+      DRIVE_SHARE_LINK_BASE_URL: ${DRIVE_SHARE_LINK_BASE_URL:-http://localhost:3000/drive/shared}
+    ports:
+      - "8110:8110"
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+volumes:
+  postgres-drive-data:
+    driver: local
+  minio-data:
+    driver: local
+
+networks:
+  darevel-network:
+    driver: bridge

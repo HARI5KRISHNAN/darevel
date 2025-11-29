@@ -1,0 +1,42 @@
+server:
+  port: 8102
+
+spring:
+  application:
+    name: wiki-content-service
+  datasource:
+    url: ${WIKI_CONTENT_DB_URL:jdbc:postgresql://localhost:5441/wiki}
+    username: ${WIKI_CONTENT_DB_USERNAME:wiki}
+    password: ${WIKI_CONTENT_DB_PASSWORD:wiki}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OAUTH_ISSUER_URI:http://localhost:8180/realms/darevel}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+logging:
+  level:
+    com.darevel.wiki.content: INFO

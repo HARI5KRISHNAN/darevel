@@ -1,0 +1,22 @@
+server:
+  port: ${WORKFLOW_CONNECTOR_PORT:9404}
+
+spring:
+  application:
+    name: workflow-connector-service
+  datasource:
+    url: ${WORKFLOW_CONNECTOR_DB_URL:jdbc:postgresql://localhost:5442/workflow_connector}
+    username: ${WORKFLOW_CONNECTOR_DB_USER:workflow}
+    password: ${WORKFLOW_CONNECTOR_DB_PASSWORD:workflow}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,prometheus"

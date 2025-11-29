@@ -108,25 +108,46 @@
       "name": "Darevel Slides",
       "description": "Presentation application client",
       "enabled": true,
-      "publicClient": false,
-      "clientAuthenticatorType": "client-secret",
+      "publicClient": true,
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": false,
       "protocol": "openid-connect",
-      "secret": "darevel-slides-secret",
       "rootUrl": "http://localhost:3000",
       "baseUrl": "http://localhost:3000",
       "redirectUris": [
-        "http://localhost:3000/*",
-        "http://localhost:3000/api/auth/callback/keycloak"
+        "http://localhost:3000/*"
       ],
       "webOrigins": [
         "http://localhost:3000"
       ],
       "attributes": {
         "post.logout.redirect.uris": "http://localhost:3000/*",
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "darevel-docs",
+      "name": "Darevel Docs",
+      "description": "Document editor application client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "rootUrl": "http://localhost:3009",
+      "baseUrl": "http://localhost:3009",
+      "redirectUris": [
+        "http://localhost:3009/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3009"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3009/*",
         "pkce.code.challenge.method": "S256"
       }
     },
@@ -181,6 +202,190 @@
       ],
       "attributes": {
         "post.logout.redirect.uris": "http://localhost:8000/*"
+      }
+    },
+    {
+      "clientId": "darevel-form",
+      "name": "Darevel Form",
+      "description": "Form Builder application client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "rootUrl": "http://localhost:3005",
+      "baseUrl": "http://localhost:3005",
+      "redirectUris": [
+        "http://localhost:3005/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3005"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3005/*"
+      }
+    },
+    {
+      "clientId": "darevel-wiki",
+      "name": "Darevel Wiki",
+      "description": "Wiki knowledge base application client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "rootUrl": "http://localhost:3010",
+      "baseUrl": "http://localhost:3010",
+      "redirectUris": [
+        "http://localhost:3010/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3010"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3010/*"
+      }
+    },
+    {
+      "clientId": "darevel-workflow",
+      "name": "Darevel Workflow",
+      "description": "Workflow automation application client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "rootUrl": "http://localhost:3006",
+      "baseUrl": "http://localhost:3006",
+      "redirectUris": [
+        "http://localhost:3006/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3006"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3006/*"
+      }
+    },
+    {
+      "clientId": "darevel-dashboard",
+      "name": "Darevel Dashboard",
+      "description": "Dashboard application client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "rootUrl": "http://localhost:3007",
+      "baseUrl": "http://localhost:3007",
+      "redirectUris": [
+        "http://localhost:3007/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3007"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3007/*"
+      }
+    },
+    {
+      "clientId": "darevel-notification",
+      "name": "Darevel Notification",
+      "description": "Notification Center application client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "rootUrl": "http://localhost:3011",
+      "baseUrl": "http://localhost:3011",
+      "redirectUris": [
+        "http://localhost:3011/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3011"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3011/*"
+      }
+    },
+    {
+      "clientId": "darevel-drive",
+      "name": "Darevel Drive",
+      "description": "Drive storage application client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "rootUrl": "http://localhost:3012",
+      "baseUrl": "http://localhost:3012",
+      "redirectUris": [
+        "http://localhost:3012/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3012"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3012/*"
+      }
+    },
+    {
+      "clientId": "darevel-access",
+      "name": "Darevel Access",
+      "description": "Access control application client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "rootUrl": "http://localhost:3013",
+      "baseUrl": "http://localhost:3013",
+      "redirectUris": [
+        "http://localhost:3013/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3013"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3013/*"
+      }
+    },
+    {
+      "clientId": "darevel-search",
+      "name": "Darevel Search",
+      "description": "Search application client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "rootUrl": "http://localhost:3014",
+      "baseUrl": "http://localhost:3014",
+      "redirectUris": [
+        "http://localhost:3014/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3014"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3014/*"
       }
     }
   ],

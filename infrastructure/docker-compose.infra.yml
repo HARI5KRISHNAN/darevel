@@ -1,0 +1,312 @@
+version: "3.9"
+
+services:
+  # =========================
+  # POSTGRES DATABASES
+  # =========================
+
+  postgres-core:
+    image: postgres:16
+    container_name: postgres-core
+    environment:
+      POSTGRES_DB: darevel_core
+      POSTGRES_USER: darevel
+      POSTGRES_PASSWORD: darevel_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_core_data:/var/lib/postgresql/data
+    networks:
+      - darevel-net
+
+  postgres-infra:
+    image: postgres:16
+    container_name: postgres-infra
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_infra_data:/var/lib/postgresql/data
+    networks:
+      - darevel-net
+
+  postgres-docs:
+    image: postgres:16
+    container_name: postgres-docs
+    environment:
+      POSTGRES_DB: darevel_docs
+      POSTGRES_USER: darevel_docs
+      POSTGRES_PASSWORD: darevel_docs_password
+    ports:
+      - "5439:5432"
+    volumes:
+      - postgres_docs_data:/var/lib/postgresql/data
+    networks:
+      - darevel-net
+
+  postgres-form:
+    image: postgres:16
+    container_name: postgres-form
+    environment:
+      POSTGRES_DB: darevel_form
+      POSTGRES_USER: darevel_form
+      POSTGRES_PASSWORD: darevel_form_password
+    ports:
+      - "5440:5432"
+    volumes:
+      - postgres_form_data:/var/lib/postgresql/data
+    networks:
+      - darevel-net
+
+  postgres-wiki:
+    image: postgres:16
+    container_name: postgres-wiki
+    environment:
+      POSTGRES_DB: darevel_wiki
+      POSTGRES_USER: darevel_wiki
+      POSTGRES_PASSWORD: darevel_wiki_password
+    ports:
+      - "5441:5432"
+    volumes:
+      - postgres_wiki_data:/var/lib/postgresql/data
+    networks:
+      - darevel-net
+
+  postgres-workflow:
+    image: postgres:16
+    container_name: postgres-workflow
+    environment:
+      POSTGRES_DB: darevel_workflow
+      POSTGRES_USER: darevel_workflow
+      POSTGRES_PASSWORD: darevel_workflow_password
+    ports:
+      - "5442:5432"
+    volumes:
+      - postgres_workflow_data:/var/lib/postgresql/data
+    networks:
+      - darevel-net
+
+  postgres-dashboard:
+    image: postgres:16
+    container_name: postgres-dashboard
+    environment:
+      POSTGRES_DB: darevel_dashboard
+      POSTGRES_USER: darevel_dashboard
+      POSTGRES_PASSWORD: darevel_dashboard_password
+    ports:
+      - "5443:5432"
+    volumes:
+      - postgres_dashboard_data:/var/lib/postgresql/data
+    networks:
+      - darevel-net
+
+  postgres-billing:
+    image: postgres:16
+    container_name: postgres-billing
+    environment:
+      POSTGRES_DB: darevel_billing
+      POSTGRES_USER: darevel_billing
+      POSTGRES_PASSWORD: darevel_billing_password
+    ports:
+      - "5444:5432"
+    volumes:
+      - postgres_billing_data:/var/lib/postgresql/data
+    networks:
+      - darevel-net
+
+  postgres-notification:
+    image: postgres:16
+    container_name: postgres-notification
+    environment:
+      POSTGRES_DB: notification
+      POSTGRES_USER: notification
+      POSTGRES_PASSWORD: notification_password
+    ports:
+      - "5445:5432"
+    volumes:
+      - postgres_notification_data:/var/lib/postgresql/data
+    networks:
+      - darevel-net
+
+  postgres-audit:
+    image: postgres:16
+    container_name: postgres-audit
+    environment:
+      POSTGRES_DB: darevel_audit
+      POSTGRES_USER: darevel_audit
+      POSTGRES_PASSWORD: darevel_audit_password
+    ports:
+      - "5446:5432"
+    volumes:
+      - postgres_audit_data:/var/lib/postgresql/data
+    networks:
+      - darevel-net
+
+  postgres-drive:
+    image: postgres:16
+    container_name: postgres-drive
+    environment:
+      POSTGRES_DB: darevel_drive_meta
+      POSTGRES_USER: darevel_drive
+      POSTGRES_PASSWORD: darevel_drive_password
+    ports:
+      - "5447:5432"
+    volumes:
+      - postgres_drive_data:/var/lib/postgresql/data
+    networks:
+      - darevel-net
+
+  postgres-search:
+    image: postgres:16
+    container_name: postgres-search
+    environment:
+      POSTGRES_DB: darevel_search
+      POSTGRES_USER: darevel_search
+      POSTGRES_PASSWORD: darevel_search_password
+    ports:
+      - "5448:5432"
+    volumes:
+      - postgres_search_data:/var/lib/postgresql/data
+    networks:
+      - darevel-net
+
+  # =========================
+  # REDIS INSTANCES
+  # =========================
+
+  redis-dashboard:
+    image: redis:7
+    container_name: redis-dashboard
+    ports:
+      - "6379:6379"
+    networks:
+      - darevel-net
+
+  redis-notification:
+    image: redis:7
+    container_name: redis-notification
+    ports:
+      - "6385:6379"
+    networks:
+      - darevel-net
+
+  redis-search:
+    image: redis:7
+    container_name: redis-search
+    ports:
+      - "6386:6379"
+    networks:
+      - darevel-net
+
+  # =========================
+  # KAFKA + ZOOKEEPER
+  # =========================
+
+  zookeeper:
+    image: bitnami/zookeeper:3.9
+    container_name: zookeeper
+    environment:
+      - ZOO_ENABLE_AUTH=no
+      - ZOO_CLIENT_PORT=2181
+    ports:
+      - "2181:2181"
+    networks:
+      - darevel-net
+
+  kafka:
+    image: bitnami/kafka:3.7
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    ports:
+      - "9092:9092"
+    networks:
+      - darevel-net
+
+  # =========================
+  # KEYCLOAK (AUTH)
+  # =========================
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.5
+    container_name: keycloak
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres-infra:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak_password
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    command: ["start-dev", "--http-port=8080"]
+    depends_on:
+      - postgres-infra
+    ports:
+      - "8180:8080"
+    networks:
+      - darevel-net
+
+  # =========================
+  # MEILISEARCH (SEARCH BACKEND)
+  # =========================
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: meilisearch
+    environment:
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_ENV: "development"
+      MEILI_MASTER_KEY: "local_meili_master_key"
+    ports:
+      - "7700:7700"
+    volumes:
+      - meili_data:/meili_data
+    networks:
+      - darevel-net
+
+  # =========================
+  # MINIO (S3-COMPATIBLE STORAGE)
+  # =========================
+
+  minio:
+    image: minio/minio:RELEASE.2024-01-11T07-46-16Z
+    container_name: minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: darevel_minio
+      MINIO_ROOT_PASSWORD: darevel_minio_password
+    ports:
+      - "9500:9000"  # S3 API
+      - "9501:9001"  # Console
+    volumes:
+      - minio_data:/data
+    networks:
+      - darevel-net
+
+networks:
+  darevel-net:
+    driver: bridge
+
+volumes:
+  postgres_core_data:
+  postgres_infra_data:
+  postgres_docs_data:
+  postgres_form_data:
+  postgres_wiki_data:
+  postgres_workflow_data:
+  postgres_dashboard_data:
+  postgres_billing_data:
+  postgres_notification_data:
+  postgres_audit_data:
+  postgres_drive_data:
+  postgres_search_data:
+  meili_data:
+  minio_data:

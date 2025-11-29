@@ -1,0 +1,14 @@
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\audit\backend\audit-service\src\main\java\com\darevel\audit\entity\AuditLogEntry.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\audit\backend\audit-service\src\main\java\com\darevel\audit\config\TenantResolver.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\audit\backend\audit-service\src\main\java\com\darevel\audit\repository\AuditLogRepository.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\audit\backend\audit-service\src\main\java\com\darevel\audit\dto\AuditLogRequest.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\audit\backend\audit-service\src\main\java\com\darevel\audit\service\AuditRetentionService.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\audit\backend\audit-service\src\main\java\com\darevel\audit\dto\AuditLogPageResponse.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\audit\backend\audit-service\src\main\java\com\darevel\audit\controller\AuditController.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\audit\backend\audit-service\src\main\java\com\darevel\audit\exception\GlobalExceptionHandler.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\audit\backend\audit-service\src\main\java\com\darevel\audit\dto\AuditLogResponse.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\audit\backend\audit-service\src\main\java\com\darevel\audit\service\AuditService.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\audit\backend\audit-service\src\main\java\com\darevel\audit\config\SecurityConfig.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\audit\backend\audit-service\src\main\java\com\darevel\audit\AuditServiceApplication.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\audit\backend\audit-service\src\main\java\com\darevel\audit\config\AuditProperties.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\audit\backend\audit-service\src\main\java\com\darevel\audit\dto\PaginationMeta.java

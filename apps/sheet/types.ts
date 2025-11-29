@@ -1,35 +1,65 @@
-export interface CellFormat {
+
+export interface CellStyle {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
-  textColor?: string;
+  align?: 'left' | 'center' | 'right';
   backgroundColor?: string;
-  fontFamily?: string;
+  color?: string;
   fontSize?: number;
-  textAlign?: 'left' | 'center' | 'right';
-  verticalAlign?: 'top' | 'middle' | 'bottom';
 }
 
-export interface CellData {
+export interface Cell {
+  id: string; // e.g., "A1"
   value: string;
-  formula?: string; // Store the original formula if the cell contains one
-  format?: Partial<CellFormat>;
+  formula?: string;
+  style?: CellStyle;
 }
 
-export type RowData = CellData[];
-export type SheetData = RowData[];
-
-export interface CellCoords {
-  row: number;
-  col: number;
+export interface Sheet {
+  id: string;
+  name: string;
+  data: Record<string, Cell>; // Map "A1": Cell
+  remoteId?: number;
 }
 
-export interface SelectionArea {
-  start: CellCoords;
-  end: CellCoords;
+export interface SheetSummary {
+  id: number;
+  name: string;
+  lastSavedAt?: string;
+  updatedAt?: string;
 }
 
-export interface Merge {
-  start: CellCoords;
-  end: CellCoords;
+export interface DocumentState {
+  title: string;
+  lastSaved: Date;
+  activeSheetId: string;
+  activeCell: string | null; // e.g., "B2"
+  selectionRange: string[] | null;
+}
+
+export enum EditorMode {
+  EDIT = 'EDIT',
+  VIEW = 'VIEW'
+}
+
+export enum LeftPanelType {
+  NONE = 'NONE',
+  FUNCTIONS = 'FUNCTIONS',
+  INSERT = 'INSERT',
+  SEARCH = 'SEARCH',
+  AI = 'AI',
+  DATA = 'DATA',
+  SNIPPETS = 'SNIPPETS',
+  TEMPLATES = 'TEMPLATES',
+  COLLABORATION = 'COLLABORATION'
+}
+
+export enum RightPanelType {
+  NONE = 'NONE',
+  COMMENTS = 'COMMENTS',
+  FORMATTING = 'FORMATTING',
+  SETTINGS = 'SETTINGS',
+  CHART = 'CHART',
+  DATA_VALIDATION = 'DATA_VALIDATION'
 }

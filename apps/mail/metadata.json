@@ -1,5 +1,9 @@
 {
-  "name": "Mailbox UI Clone",
-  "description": "A modern, responsive email client interface built with React and Tailwind CSS, replicating a provided design.",
-  "requestFramePermissions": []
+  "name": "Darevel Mail",
+  "description": "Professional email client with modern interface, calendar integration, and video conferencing",
+  "icon": "mail",
+  "category": "communication",
+  "version": "1.0.0",
+  "author": "Darevel Team",
+  "license": "MIT"
 }

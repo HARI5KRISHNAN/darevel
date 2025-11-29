@@ -19,6 +19,7 @@
     "dev:mail": "npm run dev --workspace=mailbox-ui-clone",
     "dev:sheet": "npm run dev --workspace=sheet",
     "dev:slides": "npm run dev --workspace=@darevel/slides",
+    "dev:dashboard": "npm run dev --workspace=darevel-dashboard",
     "dev:suite": "npm run dev --workspace=@darevel/suite",
     "build": "turbo run build",
     "stop:infra": "cd infrastructure && docker-compose down",

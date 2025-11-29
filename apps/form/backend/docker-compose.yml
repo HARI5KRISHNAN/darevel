@@ -1,0 +1,150 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Form Services
+  postgres-form:
+    image: postgres:15-alpine
+    container_name: darevel-postgres-form
+    environment:
+      POSTGRES_DB: darevel_form
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5440:5432"
+    volumes:
+      - form-postgres-data:/var/lib/postgresql/data
+      - ./init-dbs.sql:/docker-entrypoint-initdb.d/init-dbs.sql
+    networks:
+      - darevel-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Form Service (Main form management - Port 8090)
+  form-service:
+    build:
+      context: ./form-service
+      dockerfile: Dockerfile
+    container_name: darevel-form-service
+    environment:
+      SERVER_PORT: 8090
+      DB_HOST: postgres-form
+      DB_PORT: 5432
+      DB_NAME: darevel_form
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      JWT_ISSUER_URI: http://keycloak:8080/realms/darevel
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3002,http://localhost:3005
+    ports:
+      - "8090:8090"
+    depends_on:
+      postgres-form:
+        condition: service_healthy
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  # Response Service (Form submissions - Port 8091)
+  response-service:
+    build:
+      context: ./response-service
+      dockerfile: Dockerfile
+    container_name: darevel-response-service
+    environment:
+      SERVER_PORT: 8091
+      DB_HOST: postgres-form
+      DB_PORT: 5432
+      DB_NAME: darevel_form_response
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      JWT_ISSUER_URI: http://keycloak:8080/realms/darevel
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3002,http://localhost:3005
+    ports:
+      - "8091:8091"
+    depends_on:
+      postgres-form:
+        condition: service_healthy
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  # Public Link Service (Anonymous access - Port 8092)
+  public-link-service:
+    build:
+      context: ./public-link-service
+      dockerfile: Dockerfile
+    container_name: darevel-public-link-service
+    environment:
+      SERVER_PORT: 8092
+      DB_HOST: postgres-form
+      DB_PORT: 5432
+      DB_NAME: darevel_form
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      FORM_SERVICE_URL: http://form-service:8090
+      RESPONSE_SERVICE_URL: http://response-service:8091
+      CORS_ORIGINS: "*"
+      RATE_LIMIT: 60
+      RATE_LIMIT_IP: 10
+    ports:
+      - "8092:8092"
+    depends_on:
+      - form-service
+      - response-service
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  # Analytics Service (Submission analytics - Port 8093)
+  analytics-service:
+    build:
+      context: ./analytics-service
+      dockerfile: Dockerfile
+    container_name: darevel-analytics-service
+    environment:
+      SERVER_PORT: 8093
+      DB_HOST: postgres-form
+      DB_PORT: 5432
+      DB_NAME: darevel_form_analytics
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      JWT_ISSUER_URI: http://keycloak:8080/realms/darevel
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3002,http://localhost:3005
+    ports:
+      - "8093:8093"
+    depends_on:
+      postgres-form:
+        condition: service_healthy
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+  # AI Form Service (AI generation - Port 8094)
+  ai-form-service:
+    build:
+      context: ./ai-form-service
+      dockerfile: Dockerfile
+    container_name: darevel-ai-form-service
+    environment:
+      SERVER_PORT: 8094
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      JWT_ISSUER_URI: http://keycloak:8080/realms/darevel
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3002,http://localhost:3005
+      RATE_LIMIT_USER: 20
+    ports:
+      - "8094:8094"
+    networks:
+      - darevel-network
+    restart: unless-stopped
+
+volumes:
+  form-postgres-data:
+
+networks:
+  darevel-network:
+    external: true

@@ -1,0 +1,10 @@
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\workflow\backend\workflow-shared\src\main\java\com\darevel\workflow\shared\enums\WorkflowStatus.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\workflow\backend\workflow-shared\src\main\java\com\darevel\workflow\shared\events\TriggerEvent.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\workflow\backend\workflow-shared\src\main\java\com\darevel\workflow\shared\dto\WorkflowRunDto.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\workflow\backend\workflow-shared\src\main\java\com\darevel\workflow\shared\enums\ActionType.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\workflow\backend\workflow-shared\src\main\java\com\darevel\workflow\shared\messaging\KafkaTopics.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\workflow\backend\workflow-shared\src\main\java\com\darevel\workflow\shared\dto\WorkflowDefinitionDto.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\workflow\backend\workflow-shared\src\main\java\com\darevel\workflow\shared\enums\TriggerType.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\workflow\backend\workflow-shared\src\main\java\com\darevel\workflow\shared\dto\WorkflowTriggerDto.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\workflow\backend\workflow-shared\src\main\java\com\darevel\workflow\shared\dto\WorkflowActionDto.java
+C:\Users\acer\Downloads\darevel-final full stack\darevel-main\apps\workflow\backend\workflow-shared\src\main\java\com\darevel\workflow\shared\events\WorkflowExecutionEvent.java

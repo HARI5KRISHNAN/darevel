@@ -5,9 +5,9 @@ services:
       dockerfile: Dockerfile
     container_name: darevel-mail-service
     ports:
-      - "8086:8086"
+      - "8083:8083"
     environment:
-      SERVER_PORT: ${SERVER_PORT:-8086}
+      SERVER_PORT: ${SERVER_PORT:-8083}
       DB_HOST: ${DB_HOST:-host.docker.internal}
       DB_PORT: ${DB_PORT:-5437}
       PGHOST: ${PGHOST:-host.docker.internal}
@@ -29,7 +29,7 @@ services:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8086/api/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8083/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3

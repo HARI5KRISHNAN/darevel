@@ -30,6 +30,8 @@ The platform consists of the following microservices:
 | **Suite** | 8085 | TBD | Dashboard and monitoring | ✅ Complete |
 | **Mail** | 8086 | 3008 | Email and Jitsi integration | ✅ Complete |
 | **Sheet** | 8089 | 3004 | Spreadsheet management | ✅ Complete |
+| **Dashboard** | 9410 | 3007 | Unified workspace insights + automation | 🚧 New |
+| **Notification Center** | 9495 | 3011 | Workspace notifications + preferences | 🚧 New |
 
 ### Chat Microservices Breakdown
 
@@ -74,6 +76,8 @@ Access:
 - **Slides**: http://localhost:3000
 - **Mail**: http://localhost:3008
 - **Sheet**: http://localhost:3004
+- **Dashboard**: http://localhost:3007
+- **Notification Center**: http://localhost:3011
 - **Keycloak**: http://localhost:8180/admin (admin/admin)
 
 ### Individual Service Startup
@@ -90,6 +94,8 @@ Start services individually for development:
 .\start-suite.bat     # Suite (DB + Backend only)
 .\start-mail.bat      # Mail (DB + Backend + Frontend)
 .\start-sheet.bat     # Sheet (DB + Backend + Frontend)
+.\start-dashboard.bat # Dashboard (DB + Cache + Backend + Frontend)
+.\start-notification.bat # Notification (DB + Redis + Backend + Frontend)
 ```
 
 **Linux/Mac:**
@@ -108,6 +114,8 @@ Start services individually for development:
 .\stop-slides.bat        # Stop individual service
 .\stop-mail.bat
 .\stop-sheet.bat
+.\stop-dashboard.bat
+.\stop-notification.bat
 ```
 
 ## Service Details
@@ -149,24 +157,48 @@ Presentation management with rich formatting and slide layouts.
 
 **Documentation**: [Slides Backend README](apps/slides/backend/README.md)
 
-### Suite/Dashboard Service
+### Dashboard Service
 
-**Location**: `apps/suite/`
+**Location**: `apps/dashboard/`
 
-Central dashboard for user management and service monitoring.
+Mission-control style home that aggregates KPIs, usage trends, and AI guidance across Darevel apps.
 
 **Key Features**:
-- User profile management
-- User preferences (theme, language, notifications)
-- Integration management
-- Multi-service health check aggregation
-- Dashboard statistics
+- Service health tiles + incident feed sourced from the new Spring Boot backend
+- File, form, and workflow widgets surfaced through shared APIs
+- Gemini-powered assistant panel for quick summaries and actions
+- Redis-backed caching for fast refresh of dashboard cards
+- Flyway-managed Postgres schema with curated demo data sets
 
-**Backend Port**: 8085
-**Frontend Port**: TBD
-**Database**: `darevel_suite`
+**Backend Port**: 9410
+**Frontend Port**: 3007
+**Database**: `dashboard` (PostgreSQL @ 5443)
+**Cache**: Redis (6379)
 
-**Documentation**: [Suite Backend README](apps/suite/backend/README.md)
+**Docs & Tooling**:
+- `apps/dashboard/backend/dashboard-service/` contains the Dockerfile plus compose stacks for Postgres + Redis
+- `start-dashboard.bat` / `stop-dashboard.bat` wire database, cache, backend, and frontend together on Windows
+- Frontend runs via `npm install && npm run dev`
+
+### Notification Service
+
+**Location**: `apps/notification/`
+
+Global notification center that ingests workspace events, persists them per user/org, and fans them out over WebSockets to the React bell UI plus badge widgets embedded across the suite.
+
+**Key Features**:
+- Redis pub/sub bridge for `events.*` channels with fan-out through Spring WebSocket `/ws/notifications`
+- REST APIs for feeds, unread counters, preference management, and mute windows (JWT + `X-User-Id`/`X-Org-Id` headers)
+- Postgres persistence with Flyway-managed tables for `notifications` and `notification_preferences`
+- Caching layer for unread badge counts with configurable TTLs
+- Dockerized stack (Postgres 5445 + Redis 6385 + Spring Boot 9495) plus dedicated start/stop scripts
+
+**Backend Port**: 9495
+**Frontend Port**: 3011
+**Database**: `notification` (PostgreSQL @ 5445)
+**Cache**: Redis (6385)
+
+**Documentation**: [Notification Backend README](apps/notification/backend/README.md)
 
 ### Mail Service
 
@@ -222,6 +254,8 @@ Spreadsheet management with real-time collaboration support.
 8087 - Chat AI Service
 8088 - Chat Email Service
 8089 - Sheet Service
+9410 - Dashboard Service
+9495 - Notification Service
 ```
 
 ### Frontend Applications
@@ -230,7 +264,10 @@ Spreadsheet management with real-time collaboration support.
 3000 - Slides Frontend
 3003 - Chat Frontend
 3004 - Sheet Frontend
+3007 - Dashboard Frontend
 3008 - Mail Frontend
+3009 - Docs Frontend
+3011 - Notification Center
 ```
 
 ### Infrastructure
@@ -240,6 +277,8 @@ Spreadsheet management with real-time collaboration support.
 8000 - Jitsi Meet
 9090 - Prometheus
 3001 - Grafana
+6379 - Dashboard Redis Cache
+6385 - Notification Redis Cache
 ```
 
 ### Databases (PostgreSQL)
@@ -253,6 +292,8 @@ Each service has its own dedicated PostgreSQL instance:
 5436 - Suite Database
 5437 - Mail Database
 5438 - Sheet Database
+5443 - Dashboard Database
+5445 - Notification Database
 ```
 
 📖 **See [DATABASE-ARCHITECTURE.md](DATABASE-ARCHITECTURE.md) for detailed database documentation**
@@ -266,6 +307,8 @@ Each service has its own PostgreSQL container:
 - **darevel-postgres-suite** (port 5436) - `darevel_suite`
 - **darevel-postgres-mail** (port 5437) - `darevel_mail`
 - **darevel-postgres-sheet** (port 5438) - `darevel_sheet`
+- **darevel-postgres-dashboard** (port 5443) - `dashboard`
+- **darevel-postgres-notification** (port 5445) - `notification`
 
 ### Manual Database Access (if needed)
 
@@ -275,6 +318,8 @@ psql -h localhost -p 5435 -U postgres -d darevel_slides
 psql -h localhost -p 5436 -U postgres -d darevel_suite
 psql -h localhost -p 5437 -U postgres -d darevel_mail
 psql -h localhost -p 5438 -U postgres -d darevel_sheet
+psql -h localhost -p 5443 -U postgres -d dashboard
+psql -h localhost -p 5445 -U notification -d notification
 ```
 
 All tables are auto-created by Hibernate with `ddl-auto: update`.
@@ -322,6 +367,7 @@ All services use Keycloak for OAuth2/OIDC authentication.
    - `darevel-chat`
    - `darevel-slides`
    - `darevel-suite`
+  - `darevel-dashboard`
    - `darevel-mail`
    - `darevel-sheet`
    - `darevel-jitsi`

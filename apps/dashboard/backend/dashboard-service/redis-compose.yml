@@ -1,0 +1,25 @@
+services:
+  redis-dashboard:
+    image: redis:7-alpine
+    container_name: darevel-redis-dashboard
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - darevel-redis-dashboard-data:/data
+    networks:
+      - darevel-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  darevel-redis-dashboard-data:
+    driver: local
+
+networks:
+  darevel-network:
+    driver: bridge

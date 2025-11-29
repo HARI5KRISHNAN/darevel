@@ -1,0 +1,59 @@
+server:
+  port: ${DASHBOARD_SERVICE_PORT:9410}
+
+spring:
+  application:
+    name: dashboard-service
+  datasource:
+    url: ${DASHBOARD_DB_URL:jdbc:postgresql://localhost:5443/dashboard}
+    username: ${DASHBOARD_DB_USER:dashboard}
+    password: ${DASHBOARD_DB_PASSWORD:dashboard}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+  cache:
+    type: redis
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+security:
+  oauth2:
+    resource-server:
+      jwt:
+        issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/darevel}
+
+feign:
+  client:
+    config:
+      default:
+        connect-timeout: 2000
+        read-timeout: 3000
+
+logging:
+  level:
+    com.darevel.dashboard: INFO
+
+dashboard:
+  demo:
+    user-id: 11111111-2222-3333-4444-555555555555
+    org-id: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+    team-id: 99999999-8888-7777-6666-555555555555
+    user-name: Alex Chen
+    team-name: Engineering Core
+    org-name: Darevel Labs

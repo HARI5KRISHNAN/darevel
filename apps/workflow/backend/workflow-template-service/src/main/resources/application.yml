@@ -1,0 +1,22 @@
+server:
+  port: ${WORKFLOW_TEMPLATE_PORT:9407}
+
+spring:
+  application:
+    name: workflow-template-service
+  datasource:
+    url: ${WORKFLOW_TEMPLATE_DB_URL:jdbc:postgresql://localhost:5442/workflow_template}
+    username: ${WORKFLOW_TEMPLATE_DB_USER:workflow}
+    password: ${WORKFLOW_TEMPLATE_DB_PASSWORD:workflow}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,prometheus"

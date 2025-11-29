@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  postgres-wiki:
+    image: postgres:15-alpine
+    container_name: darevel-postgres-wiki
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: darevel_wiki
+    ports:
+      - "5441:5432"
+    volumes:
+      - darevel-postgres-wiki-data:/var/lib/postgresql/data
+    networks:
+      - darevel-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  darevel-postgres-wiki-data:
+    driver: local
+
+networks:
+  darevel-network:
+    driver: bridge

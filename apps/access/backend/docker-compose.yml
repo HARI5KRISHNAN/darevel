@@ -1,0 +1,38 @@
+version: "3.9"
+services:
+  darevel-access-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: access
+      POSTGRES_USER: access
+      POSTGRES_PASSWORD: access
+    ports:
+      - "5447:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "access"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  darevel-access-redis:
+    image: redis:7-alpine
+    ports:
+      - "6387:6379"
+
+  authz-service:
+    build:
+      context: ./authz-service
+    environment:
+      DB_URL: jdbc:postgresql://darevel-access-db:5432/access
+      DB_USERNAME: access
+      DB_PASSWORD: access
+      REDIS_HOST: darevel-access-redis
+      REDIS_PORT: 6379
+      JWT_ISSUER_URI: http://keycloak:8080/realms/darevel
+    depends_on:
+      darevel-access-db:
+        condition: service_healthy
+      darevel-access-redis:
+        condition: service_started
+    ports:
+      - "8096:8096"

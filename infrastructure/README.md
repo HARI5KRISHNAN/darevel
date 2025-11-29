@@ -2,6 +2,35 @@
 
 This directory contains the infrastructure services for the Darevel platform.
 
+## Full Infra Stack (all databases, Redis, Kafka, Keycloak, Meilisearch, MinIO)
+
+A consolidated compose file `docker-compose.infra.yml` brings up only infrastructure:
+- Multiple Postgres instances (5432–5448 mapped to matching containers)
+- Redis (6379, 6385, 6386)
+- Kafka + Zookeeper (9092/2181)
+- Keycloak (8180)
+- Meilisearch (7700)
+- MinIO (9500 API / 9501 console)
+
+Start everything:
+```bash
+cd infrastructure
+docker-compose -f docker-compose.infra.yml up -d
+```
+
+Stop:
+```bash
+cd infrastructure
+docker-compose -f docker-compose.infra.yml down
+```
+
+Service connection examples (from containers):
+- Kafka: `kafka:9092`
+- Keycloak: `http://keycloak:8080`
+- MinIO: `http://minio:9000` (console `http://localhost:9501`)
+- Meilisearch: `http://meilisearch:7700`
+- Postgres per service: `jdbc:postgresql://postgres-<service>:5432/<db_name>` (see compose)
+
 ## Services
 
 ### 1. Keycloak (Authentication)
